@@ -244,7 +244,7 @@
 </div>
 
 <script>
-    const ENGINE_VERSION = "8.5.1";
+    const ENGINE_VERSION = "9.0.0";
     const EMPTY = 0, W_MAN = 1, B_MAN = -1, W_KING = 2, B_KING = -2;
     const MODE_HVH = 0, MODE_HVM = 1, MODE_MVH = 2, MODE_MVM = 3, MODE_SAND = 4;
 
@@ -430,20 +430,97 @@
         }
 
         eval() {
-            let score = 0;
-            for (let i=0; i<64; i++) {
-                let p = this.board[i]; if (p === EMPTY) continue;
-                let sign = Math.sign(p), val = Math.abs(p)===2 ? 300 : 100;
+            // ── Phase detection ──────────────────────────────────────────────
+            let wK=0, wP=0, bK=0, bP=0;
+            let wAdvTotal=0, bAdvTotal=0;
+            let wCenterMen=0, bCenterMen=0;
+            let wMobEst=0, bMobEst=0;
+            let wBackRow=0, bBackRow=0;
+            let wKingMob=0, bKingMob=0;
+            let wKingCenter=0, bKingCenter=0;
+
+            for (let i = 0; i < 64; i++) {
+                let p = this.board[i];
+                if (p === EMPTY) continue;
                 let r = Math.floor(i/8), c = i%8;
-                val += (10 - (Math.abs(3.5-r) + Math.abs(3.5-c))) * 2; // Center control
-                if (Math.abs(p)===1) {
+                let sign = Math.sign(p);
+                let isKing = Math.abs(p) === 2;
+
+                if (!isKing) {
+                    if (sign===1) wP++; else bP++;
                     let rank = sign===1 ? r : 7-r;
-                    val += rank * 5; // Advancement
-                    if (rank === 0) val += 15; // Back rank
-                    if (c === 0 || c === 7) val += 5; // Edges
+                    if (sign===1) wAdvTotal += rank; else bAdvTotal += rank;
+                    if (r>=2 && r<=5 && c>=2 && c<=5) { if(sign===1) wCenterMen++; else bCenterMen++; }
+                    if (rank===0) { if(sign===1) wBackRow++; else bBackRow++; }
+                    // Estimate forward mobility (man)
+                    let dirs = sign===1 ? [[1,1],[1,-1]] : [[-1,1],[-1,-1]];
+                    for (let [dr,dc] of dirs) {
+                        let nr=r+dr, nc=c+dc;
+                        if (nr>=0&&nr<8&&nc>=0&&nc<8&&this.board[nr*8+nc]===EMPTY) {
+                            if(sign===1) wMobEst++; else bMobEst++;
+                        }
+                    }
+                } else {
+                    if (sign===1) wK++; else bK++;
+                    let centerDist = Math.abs(3.5-r) + Math.abs(3.5-c);
+                    if(sign===1) wKingCenter += Math.round(7-centerDist); else bKingCenter += Math.round(7-centerDist);
+                    // King mobility (free diagonal squares — key for damas brasileiras)
+                    let dirs2 = [[1,1],[1,-1],[-1,1],[-1,-1]];
+                    for (let [dr,dc] of dirs2) {
+                        for (let s=1; s<8; s++) {
+                            let nr=r+dr*s, nc=c+dc*s;
+                            if (nr<0||nr>7||nc<0||nc>7) break;
+                            if (this.board[nr*8+nc]!==EMPTY) break;
+                            if(sign===1) wKingMob++; else bKingMob++;
+                        }
+                    }
                 }
-                score += sign * val;
             }
+
+            let totalPieces = wK + wP + bK + bP;
+            let isEndgame = totalPieces <= 8 || this.isEndgame;
+
+            // ── Material ─────────────────────────────────────────────────────
+            // Kings are substantially stronger in Brazilian draughts (fly kings)
+            let kingVal = isEndgame ? 360 : 310;
+            let score = (wP - bP) * 100 + (wK - bK) * kingVal;
+
+            // Non-linear material bonus: numerical superiority compounds
+            let wTotal = wP + wK, bTotal = bP + bK;
+            if (wTotal !== bTotal) score += (wTotal - bTotal) * 18;
+
+            // ── Advancement ──────────────────────────────────────────────────
+            score += (wAdvTotal - bAdvTotal) * 5;
+
+            // ── Central control ──────────────────────────────────────────────
+            score += (wCenterMen - bCenterMen) * 9;
+
+            // ── Mobility (forward squares free for men) ───────────────────────
+            score += (wMobEst - bMobEst) * 3;
+
+            // ── Back row protection (mid-game only) ───────────────────────────
+            if (!isEndgame) {
+                score += (wBackRow - bBackRow) * 7;
+            }
+
+            // ── King activity ─────────────────────────────────────────────────
+            score += (wKingMob - bKingMob) * 2;
+
+            // ── Endgame-specific ─────────────────────────────────────────────
+            if (isEndgame) {
+                // Centralize kings strongly
+                score += (wKingCenter - bKingCenter) * 6;
+
+                // King vs man: accelerate pawn promotion
+                if (wP > 0 && wK >= bK) score += wAdvTotal * 4;
+                if (bP > 0 && bK >= wK) score -= bAdvTotal * 4;
+
+                // Avoid draw by triangulation: lone side should trade aggressively
+                // If we're winning materially, push to convert faster
+                if (wTotal > bTotal) score += (totalPieces < 6 ? 80 : 40);
+                else if (bTotal > wTotal) score -= (totalPieces < 6 ? 80 : 40);
+            }
+
             return score * this.turn;
         }
     }
@@ -455,47 +532,247 @@
         else s += "-" + idx2Str(m.to);
         return s;
     }
-    function moveSorter(a, b) { 
-        let sA = (a.captured.length*100) + (a.promo?50:0); let sB = (b.captured.length*100) + (b.promo?50:0);
+    // Basic sort used for UI/suggestion display (captures first, then promos)
+    function moveSorter(a, b) {
+        let sA = (a.captured.length * 100) + (a.promo ? 50 : 0);
+        let sB = (b.captured.length * 100) + (b.promo ? 50 : 0);
         if (sA !== sB) return sB - sA;
-        return move2Str(a).localeCompare(move2Str(b)); 
+        return move2Str(a).localeCompare(move2Str(b));
     }
 
+    // ════════════════════════════════════════════════════════════════════════
+    // TRANSPOSITION TABLE — uses existing Zobrist hash infrastructure
+    // ════════════════════════════════════════════════════════════════════════
+    const TT_SIZE  = 1 << 19;   // 524 288 slots (~8 MB with objects)
+    const TT_MASK  = TT_SIZE - 1;
+    const TT_EXACT = 0, TT_LOWER = 1, TT_UPPER = 2;
+    const tt = new Array(TT_SIZE); // sparse — entries created lazily
+
+    function ttStore(hash, depth, flag, score, fromIdx, toIdx) {
+        let idx = hash & TT_MASK;
+        let e = tt[idx];
+        // Always-replace strategy: simpler and effective for draughts
+        if (!e) { tt[idx] = { h: hash, d: depth, f: flag, s: score, fm: fromIdx, tm: toIdx }; }
+        else    { e.h = hash; e.d = depth; e.f = flag; e.s = score; e.fm = fromIdx; e.tm = toIdx; }
+    }
+
+    function ttProbe(hash) {
+        let e = tt[hash & TT_MASK];
+        return (e && e.h === hash) ? e : null;
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // KILLER MOVES  (2 slots per ply)
+    // ════════════════════════════════════════════════════════════════════════
+    const MAX_PLY  = 40;
+    const killers  = Array.from({ length: MAX_PLY }, () => [null, null]);
+
+    function storeKiller(ply, m) {
+        let k = killers[ply];
+        if (k[0] && k[0].from === m.from && k[0].to === m.to) return;
+        k[1] = k[0]; k[0] = { from: m.from, to: m.to };
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // HISTORY HEURISTIC  [from * 64 + to]
+    // ════════════════════════════════════════════════════════════════════════
+    const histTable = new Int32Array(4096);
+
+    // ════════════════════════════════════════════════════════════════════════
+    // MOVE SCORING for ordering inside search
+    // ════════════════════════════════════════════════════════════════════════
+    function scoreMoveForOrdering(m, hashFrom, hashTo, ply) {
+        if (m.from === hashFrom && m.to === hashTo) return 2000000; // TT/hash move
+        if (m.captured.length > 0) return 1000000 + m.captured.length * 10000 + (m.promo ? 5000 : 0);
+        if (m.promo) return 900000;
+        let k = killers[ply];
+        if (k[0] && k[0].from === m.from && k[0].to === m.to) return 800000;
+        if (k[1] && k[1].from === m.from && k[1].to === m.to) return 799000;
+        return histTable[m.from * 64 + m.to];
+    }
+
+    function orderMoves(moves, hashFrom, hashTo, ply) {
+        // Assign scores then sort descending — avoids slow string comparisons
+        let n = moves.length;
+        let scores = new Int32Array(n);
+        for (let i = 0; i < n; i++) scores[i] = scoreMoveForOrdering(moves[i], hashFrom, hashTo, ply);
+        // Insertion sort (fast for small arrays typical in draughts)
+        for (let i = 1; i < n; i++) {
+            let sm = scores[i], mv = moves[i], j = i - 1;
+            while (j >= 0 && scores[j] < sm) { scores[j+1] = scores[j]; moves[j+1] = moves[j]; j--; }
+            scores[j+1] = sm; moves[j+1] = mv;
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // SEARCH — Negamax + PVS + Alpha-Beta + TT + Killers + History
+    // ════════════════════════════════════════════════════════════════════════
     let nodes = 0;
-    function search(state, depth, alpha, beta) {
+    let searchAborted = false;
+    let searchStartTime = 0;
+    let searchTimeLimitMs = 0; // 0 = no limit
+
+    function search(state, depth, alpha, beta, ply) {
         nodes++;
-        let moves = state.getMoves();
-        if (moves.length === 0) return -10000;
-        if (state.checkDraw()) return 0;
-        
-        // Quiescence Search (Avoid Horizon Effect)
-        if (depth <= 0) {
-            let isCap = moves.length > 0 && moves[0].captured.length > 0;
-            if (!isCap || depth < -12) return state.eval();
+
+        // Periodic time check (every 2048 nodes)
+        if (searchTimeLimitMs > 0 && (nodes & 2047) === 0) {
+            if (Date.now() - searchStartTime > searchTimeLimitMs) {
+                searchAborted = true;
+                return alpha;
+            }
         }
 
-        let max = -Infinity;
-        for (let m of moves) {
-            let s2 = state.clone(); s2.applyMove(m);
-            let score = -search(s2, depth-1, -beta, -alpha);
-            if (score > max) max = score;
-            if (max > alpha) alpha = max;
-            if (alpha >= beta) break;
+        // Draw detection
+        if (state.checkDraw()) return 0;
+
+        let hash = state.hash();
+
+        // ── Transposition Table probe ──────────────────────────────────────
+        let hashFrom = -1, hashTo = -1;
+        let tte = ttProbe(hash);
+        if (tte) {
+            hashFrom = tte.fm; hashTo = tte.tm;
+            if (tte.d >= depth) {
+                if      (tte.f === TT_EXACT)                    return tte.s;
+                else if (tte.f === TT_LOWER && tte.s >= beta)   return tte.s;
+                else if (tte.f === TT_UPPER && tte.s <= alpha)  return tte.s;
+            }
         }
-        return max;
+
+        let moves = state.getMoves();
+        if (moves.length === 0) return -9999 + ply; // Loss — prefer later loss
+
+        // ── Quiescence Search ──────────────────────────────────────────────
+        if (depth <= 0) {
+            let hasCaps = moves[0].captured.length > 0;
+            // Static eval when no captures or too deep in quiescence
+            if (!hasCaps || depth < -16) return state.eval();
+            // Otherwise fall through and search captures only
+        }
+
+        // ── Move ordering ──────────────────────────────────────────────────
+        orderMoves(moves, hashFrom, hashTo, ply);
+
+        let origAlpha = alpha;
+        let bestScore = -Infinity;
+        let bestFrom = -1, bestTo = -1;
+
+        for (let i = 0; i < moves.length; i++) {
+            let m = moves[i];
+
+            // In quiescence: skip quiet moves
+            if (depth <= 0 && m.captured.length === 0) continue;
+
+            let s2 = state.clone();
+            s2.applyMove(m);
+
+            let score;
+            if (i === 0) {
+                // Full window for first (best-ordered) move
+                score = -search(s2, depth - 1, -beta, -alpha, ply + 1);
+            } else {
+                // Principal Variation Search: null window first
+                score = -search(s2, depth - 1, -alpha - 1, -alpha, ply + 1);
+                if (!searchAborted && score > alpha && score < beta) {
+                    // Re-search with full window (PVS re-search)
+                    score = -search(s2, depth - 1, -beta, -alpha, ply + 1);
+                }
+            }
+
+            if (searchAborted) return alpha;
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestFrom = m.from; bestTo = m.to;
+            }
+            if (score > alpha) alpha = score;
+            if (alpha >= beta) {
+                // Beta cutoff — update killers and history
+                if (m.captured.length === 0) {
+                    storeKiller(ply, m);
+                    let hk = m.from * 64 + m.to;
+                    histTable[hk] = Math.min(histTable[hk] + depth * depth, 200000);
+                }
+                break;
+            }
+        }
+
+        // ── Store in Transposition Table ───────────────────────────────────
+        if (!searchAborted && bestFrom !== -1) {
+            let flag = bestScore <= origAlpha ? TT_UPPER : bestScore >= beta ? TT_LOWER : TT_EXACT;
+            ttStore(hash, depth, flag, bestScore, bestFrom, bestTo);
+        }
+
+        return bestScore;
     }
 
-    function getBestMove(state, depth) {
+    // ════════════════════════════════════════════════════════════════════════
+    // ITERATIVE DEEPENING + ASPIRATION WINDOWS
+    // Returns: { move, score, depth, nodes, pv }
+    // ════════════════════════════════════════════════════════════════════════
+    function getBestMove(state, maxDepth, timeLimitMs) {
         let moves = state.getMoves();
-        if (moves.length===0) return { move: null, score: -10000 };
-        if (moves.length===1) return { move: moves[0], score: state.eval() };
-        nodes = 0; let bestMove = moves[0], bestScore = -Infinity;
-        for (let m of moves) {
-            let s2 = state.clone(); s2.applyMove(m);
-            let score = -search(s2, depth-1, -Infinity, Infinity);
-            if (score > bestScore) { bestScore = score; bestMove = m; }
+        if (moves.length === 0) return { move: null, score: -10000, depth: 0, nodes: 0, pv: [] };
+        if (moves.length === 1) return { move: moves[0], score: state.eval(), depth: 1, nodes: 1, pv: [moves[0]] };
+
+        // Reset search state
+        for (let k of killers) { k[0] = null; k[1] = null; }
+        histTable.fill(0);
+        nodes = 0;
+        searchAborted = false;
+        searchStartTime = Date.now();
+        searchTimeLimitMs = timeLimitMs || 0;
+
+        let bestMove = moves[0];
+        let bestScore = -Infinity;
+        let reachedDepth = 0;
+
+        // Iterative Deepening: start from depth 1 and go up to maxDepth
+        for (let depth = 1; depth <= maxDepth; depth++) {
+            let score;
+
+            if (depth >= 5 && bestScore > -9000 && bestScore < 9000) {
+                // ── Aspiration Windows ──────────────────────────────────────
+                let delta = 60;
+                let al = bestScore - delta, be = bestScore + delta;
+                score = search(state, depth, al, be, 0);
+
+                if (!searchAborted && (score <= al || score >= be)) {
+                    // Window miss — full re-search
+                    score = search(state, depth, -Infinity, Infinity, 0);
+                }
+            } else {
+                score = search(state, depth, -Infinity, Infinity, 0);
+            }
+
+            if (searchAborted) break;
+
+            // Retrieve best move from TT (PV root)
+            let tte = ttProbe(state.hash());
+            if (tte && tte.fm >= 0) {
+                let found = moves.find(m => m.from === tte.fm && m.to === tte.tm);
+                if (found) { bestMove = found; bestScore = score; }
+            } else if (score > bestScore) {
+                bestScore = score;
+            }
+
+            reachedDepth = depth;
         }
-        return { move: bestMove, score: bestScore };
+
+        // Build partial PV from TT
+        let pv = [];
+        let cur = state.clone();
+        for (let d = 0; d < Math.min(reachedDepth, 6); d++) {
+            let h = cur.hash(), te = ttProbe(h);
+            if (!te || te.fm < 0) break;
+            let ms = cur.getMoves().find(m => m.from === te.fm && m.to === te.tm);
+            if (!ms) break;
+            pv.push(ms);
+            cur = cur.clone(); cur.applyMove(ms);
+        }
+
+        return { move: bestMove, score: bestScore, depth: reachedDepth, nodes, pv };
     }
 
     let gameState = new State(), selIdx = -1, valTgt = [], lastM = null;
@@ -714,25 +991,58 @@
         if (isCPU && cfgMode !== MODE_SAND) triggerCPU(); else txtAnalysis.innerText = "Analysis Mode: Off";
     }
 
+    // Time budget per move (ms) mapped to depth level
+    function getTimeBudget() {
+        // Soft time cap based on clock; keeps engine responsive
+        if (timeLimit === 0) return 0; // no clock → no time limit, use depth only
+        let remaining = gameState.turn === 1 ? timeW : timeB;
+        if (remaining <= 0) return 300;
+        // Allocate ~1/30 of remaining time per move (reasonable for most positions)
+        return Math.max(300, Math.min(remaining * 1000 / 30, 8000));
+    }
+
     function triggerCPU() {
         if (isComputing || gameEnded) return;
-        isComputing = true; txtStatus.innerText = "Computing..."; barStatus.classList.add('computing');
+        isComputing = true;
+        txtStatus.innerText = "Computing..."; barStatus.classList.add('computing');
+        let t0 = Date.now();
         setTimeout(() => {
-            let res = getBestMove(gameState, cfgDepth);
+            let timeBudget = getTimeBudget();
+            let res = getBestMove(gameState, cfgDepth, timeBudget);
+            let elapsed = ((Date.now() - t0) / 1000).toFixed(1);
             isComputing = false;
+            // Show brief engine info in analysis bar
+            let sc = res.score;
+            let scStr = sc > 9000 ? 'Mate' : sc < -9000 ? '-Mate' : (sc >= 0 ? '+' : '') + (sc/100).toFixed(2);
+            let pvStr = res.pv && res.pv.length > 0 ? res.pv.slice(0,3).map(move2Str).join(' ') : '-';
+            txtAnalysis.innerHTML = `D:<strong>${res.depth}</strong> Eval:<strong style="color:${sc>=0?'#66bb6a':'#ef5350'}">${scStr}</strong> N:<strong>${res.nodes}</strong> T:<strong>${elapsed}s</strong> PV:<strong style="color:#90caf9">${pvStr}</strong>`;
             if (res.move) exec(res.move); else render();
-        }, 50);
+        }, 10);
     }
 
     function runAna() {
+        let t0 = Date.now();
         txtAnalysis.innerHTML = `<span style="color:#29b6f6;">Evaluating Depth ${cfgDepth}...</span>`;
         setTimeout(() => {
-            let res = getBestMove(gameState, cfgDepth);
-            let sTxt = res.score === -10000 ? "Mate" : (res.score/100).toFixed(2);
-            sTxt = sTxt !== "Mate" ? (gameState.turn===1?"+":"") + (res.score>0?"-":"+") + Math.abs(sTxt) : sTxt;
-            txtAnalysis.innerHTML = `Depth: <strong>${cfgDepth}</strong> | Eval: <strong style="color:${res.score>=0?'#66bb6a':'#ef5350'}">${sTxt}</strong> | Best: <strong>${res.move?move2Str(res.move):'-'}</strong>`;
+            let res = getBestMove(gameState, cfgDepth, 0);
+            let elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+            let sc = res.score;
+            let scStr, scColor;
+            if (sc > 9000)       { scStr = 'Mate';  scColor = '#ffa726'; }
+            else if (sc < -9000) { scStr = '-Mate'; scColor = '#ffa726'; }
+            else {
+                scStr = (sc >= 0 ? '+' : '') + (sc/100).toFixed(2);
+                scColor = sc >= 0 ? '#66bb6a' : '#ef5350';
+            }
+            let pvStr = res.pv && res.pv.length > 0 ? res.pv.slice(0,5).map(move2Str).join(' ') : '-';
+            txtAnalysis.innerHTML =
+                `D:<strong>${res.depth}</strong> ` +
+                `Eval:<strong style="color:${scColor}">${scStr}</strong> ` +
+                `N:<strong>${res.nodes}</strong> ` +
+                `T:<strong>${elapsed}s</strong> ` +
+                `PV:<strong style="color:#90caf9">${pvStr}</strong>`;
             if (res.move) { selIdx = res.move.from; valTgt = [res.move]; render(); }
-        }, 50);
+        }, 10);
     }
 
     function resetBoard() {
@@ -780,14 +1090,22 @@
     document.getElementById('btn-force').onclick = () => { if(gameStarted && !gameEnded) triggerCPU(); };
     
     // Non-blocking Move Suggestion
-    document.getElementById('btn-suggest').onclick = () => { 
-        if(gameEnded || isComputing) return; 
+    document.getElementById('btn-suggest').onclick = () => {
+        if (gameEnded || isComputing) return;
         txtAnalysis.innerHTML = `<span style="color:#66bb6a;">Suggesting Depth ${cfgDepth}...</span>`;
+        let t0 = Date.now();
         setTimeout(() => {
-            let res = getBestMove(gameState, cfgDepth);
-            txtAnalysis.innerHTML = `Suggested: <strong style="color:#66bb6a">${res.move?move2Str(res.move):'-'}</strong>`;
+            let res = getBestMove(gameState, cfgDepth, 0);
+            let elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+            let sc = res.score;
+            let scStr = sc > 9000 ? 'Mate' : sc < -9000 ? '-Mate' : (sc >= 0 ? '+' : '') + (sc/100).toFixed(2);
+            let pvStr = res.pv && res.pv.length > 0 ? res.pv.slice(0,3).map(move2Str).join(' ') : '-';
+            txtAnalysis.innerHTML =
+                `Sugestão: <strong style="color:#66bb6a">${res.move ? move2Str(res.move) : '-'}</strong> ` +
+                `| Eval:<strong style="color:${sc>=0?'#66bb6a':'#ef5350'}">${scStr}</strong> ` +
+                `D:<strong>${res.depth}</strong> T:<strong>${elapsed}s</strong>`;
             if (res.move) { selIdx = res.move.from; valTgt = [res.move]; render(); }
-        }, 50);
+        }, 10);
     };
 
     // ── PDN EXPORT ──────────────────────────────────────────────────────────

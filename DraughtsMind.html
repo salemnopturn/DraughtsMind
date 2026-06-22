@@ -244,7 +244,7 @@
 </div>
 
 <script>
-    const ENGINE_VERSION = "8.5.0";
+    const ENGINE_VERSION = "8.5.1";
     const EMPTY = 0, W_MAN = 1, B_MAN = -1, W_KING = 2, B_KING = -2;
     const MODE_HVH = 0, MODE_HVM = 1, MODE_MVH = 2, MODE_MVM = 3, MODE_SAND = 4;
 
@@ -349,14 +349,19 @@
                     } else if (enemyIdx !== -1) {
                         let nCap = [...currentCaptured, enemyIdx], nPath = [...currentPath, checkIdx];
                         let origP = this.board[idx];
+                        // Regra 13 CBD: pedra que passa pela casa de coroação sem PARAR não é promovida.
+                        // Verificamos se há continuação de cadeia ANTES de decidir promoção.
                         this.board[idx] = EMPTY; this.board[checkIdx] = origP;
                         let nextCaps = this.getCaptures(checkIdx, nr, nc, isKing, nCap, origFrom, nPath);
                         this.board[idx] = origP; this.board[checkIdx] = EMPTY;
 
-                        if (nextCaps.length > 0) moves.push(...nextCaps);
-                        else {
-                            let isPromo = !isKing && ((this.turn===1 && nr===7) || (this.turn===-1 && nr===0));
-                            moves.push({ from: origFrom, to: checkIdx, path: nPath, captured: nCap, promo: isPromo, isPawn: !isKing });
+                        if (nextCaps.length > 0) {
+                            // Cadeia continua: pedra NÃO promove mesmo passando pela coroação
+                            moves.push(...nextCaps);
+                        } else {
+                            // Lance termina aqui: só promove se PAROU na casa de coroação
+                            let atCrown = !isKing && ((this.turn===1 && nr===7) || (this.turn===-1 && nr===0));
+                            moves.push({ from: origFrom, to: checkIdx, path: nPath, captured: nCap, promo: atCrown, isPawn: !isKing });
                         }
                         if (!isKing) break;
                     }
@@ -379,7 +384,33 @@
             for (let sq of this.board) {
                 if(sq===W_KING) wK++; else if(sq===W_MAN) wP++; else if(sq===B_KING) bK++; else if(sq===B_MAN) bP++;
             }
-            if ((wK>=1 && wK+wP<=3 && bK+bP<=1) || (bK>=1 && bK+bP<=3 && wK+wP<=1)) {
+            // Regras CBD 99/100 — combinações exatas de final empatado em 5 lances:
+            // 2D×2D | 2D×1D | 1D×1D | 2D×(1D+1P) | 1D×(1D+1P)
+            // Especial: 3D×1D (dama solitária dominando grande diagonal) → 5 lances
+            // Nota: movimento de pedra NÃO zera o endgameClock nestes finais (regra CBD obs. 99/100)
+            const isEndgameCombo = (() => {
+                // Sem pedras de ambos os lados (finais só de damas)
+                if (wP === 0 && bP === 0) {
+                    if (wK <= 2 && bK <= 2 && wK >= 1 && bK >= 1) return true; // 2D×2D, 2D×1D, 1D×1D
+                    if ((wK === 3 && bK === 1) || (bK === 3 && wK === 1)) {
+                        // 3D×1D: verifica se a dama solitária está na grande diagonal
+                        // Grande diagonal escura (a1-h8): índices onde r===c && (r+c)%2===0
+                        const loneColor = wK === 1 ? W_KING : B_KING;
+                        for (let i = 0; i < 64; i++) {
+                            if (this.board[i] === loneColor) {
+                                let r = Math.floor(i/8), c = i%8;
+                                if (r === c) return true; // está na grande diagonal
+                            }
+                        }
+                        return false;
+                    }
+                }
+                // Finais com uma pedra: 2D×(1D+1P) | 1D×(1D+1P)
+                if (wP === 0 && bP === 1 && wK >= 1 && bK >= 1 && wK <= 2) return true;
+                if (bP === 0 && wP === 1 && bK >= 1 && wK >= 1 && bK <= 2) return true;
+                return false;
+            })();
+            if (isEndgameCombo) {
                 if(!this.isEndgame) { this.isEndgame = true; this.endgameClock = 0; }
             } else this.isEndgame = false;
             
@@ -388,12 +419,12 @@
         }
 
         checkDraw() {
-            if (this.halfMoveClock >= 40) return "Draw: 20 moves without capture or pawn move.";
-            if (this.isEndgame && this.endgameClock >= 10) return "Draw: 5 moves endgame rule limit reached.";
+            if (this.halfMoveClock >= 40) return "Empate: 20 lances consecutivos de damas sem captura ou movimento de pedra (Regra CBD).";
+            if (this.isEndgame && this.endgameClock >= 10) return "Empate: limite de 5 lances no final (Regra CBD 99/100).";
             if (this.hashHist.length >= 9) {
                 let cur = this.hash(), c = 0;
                 for (let h of this.hashHist) if (h === cur) c++;
-                if (c >= 3) return "Draw: 3-fold position repetition.";
+                if (c >= 3) return "Empate: mesma posição repetida 3 vezes (Regra CBD 98).";
             }
             return false;
         }

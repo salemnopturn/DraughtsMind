@@ -1,4 +1,4 @@
-# ♟️ DraughtsMind
+# ⛃ DraughtsMind ⛃
 
 DraughtsMind é um software livre dedicado ao estudo, análise e treinamento de damas. Desenvolvido com foco em simplicidade, desempenho e acessibilidade, o projeto oferece uma experiência moderna para jogadores que desejam aprimorar seu entendimento estratégico do jogo.
 

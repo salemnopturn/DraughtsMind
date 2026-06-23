@@ -1091,21 +1091,43 @@
     }
 
     function resumeGame() {
-        if (gameEnded) return;
-        gameStarted=true;
-        // Navigate to live position if history navigation left us behind
-        if (currentNode !== getLiveNode()) {
-            const live=getLiveNode();
-            currentNode=live; gameState=live.state.clone();
-            if (live.state.timeW!==undefined) { timeW=live.state.timeW; timeB=live.state.timeB; }
-            lastM=live.move||null;
+        // ── Resume from whatever node the user is currently viewing. ──────────
+        // We deliberately do NOT jump to the live end-node.  The user may have
+        // navigated into an imported PDN or mid-game history and wishes to play
+        // from that exact position, possibly creating a new variation.
+        //
+        // Contract:
+        //  • gameStarted = true  — unlocks all human-interaction paths
+        //  • gameEnded   = false — cleared so terminal-state detection in
+        //                          render() can re-fire correctly for this node
+        //  • gameState   is re-synced from currentNode.state (idempotent)
+        //  • Clock is anchored fresh — no phantom elapsed time from navigation
+        //  • loop() fires immediately — CPU will move if it is the CPU's turn
+        gameStarted = true;
+        gameEnded   = false;
+        isComputing = false;
+
+        // Sync board state exactly to what the user sees
+        gameState = currentNode.state.clone();
+        lastM     = currentNode.move || null;
+        selIdx    = -1; valTgt = [];
+
+        // Restore clock times saved in this node (if time mode is active)
+        if (timeLimit > 0) {
+            if (currentNode.state.timeW !== undefined) {
+                timeW = currentNode.state.timeW;
+                timeB = currentNode.state.timeB;
+            }
+            // Anchor fresh — zero phantom elapsed from history navigation
+            clockLastStamp = Date.now();
+            startClock();
         }
-        if (timeLimit>0) startClock();
-        render(); loop();
-    }
-    function getLiveNode() {
-        // Walk to deepest main-line node
-        let n=rootNode; while (n.children.length>0) n=n.children[0]; return n;
+
+        // Dismiss any stale game-over modal that may have been open
+        document.getElementById('modal').style.display = 'none';
+
+        render();   // render() will re-detect and re-trigger game-over for terminal nodes
+        loop();     // triggers CPU immediately if it is the CPU's turn at this position
     }
 
     function onSquareClick(idx) {
@@ -1169,12 +1191,14 @@
     window.navToId = function(id) {
         if (isComputing) return;
         const n=allNodes[id]; if (!n) return;
-        // Pause the game but keep the clock stopped until Resume is pressed
+        // Pause the clock; gameStarted/gameEnded are cleared so that
+        // resumeGame() can restart cleanly from the visited position.
         stopClock();
-        gameStarted=false;
-        currentNode=n; gameState=n.state.clone();
-        lastM=n.move||null; selIdx=-1; valTgt=[];
-        txtStatus.innerText="Game Paused (History)";
+        gameStarted = false;
+        gameEnded   = false;
+        currentNode = n; gameState = n.state.clone();
+        lastM = n.move || null; selIdx = -1; valTgt = [];
+        txtStatus.innerText = "⏸ Paused — press ▶ to resume here";
         render();
     };
 
@@ -1308,57 +1332,90 @@
     }
 
     function loadEBNF(str) {
-        let moveText='';
-        for (let l of str.split('\n')) {
-            l=l.trim(); if(!l) continue;
-            if (l.startsWith('['))            continue;
-            if (l.startsWith('DraughtsMind')) continue;
-            if (l.startsWith('HASH='))        break;
-            const sc=l.indexOf(';'); if(sc!==-1) l=l.substring(0,sc).trim();
-            if (l) moveText+=l+' ';
-        }
-        moveText=moveText
-            .replace(/\{[^}]*\}/g,' ').replace(/\$\d+/g,' ')
-            .replace(/\b(2-0|0-2|1-1|1-0|0-1|1\/2-1\/2)\b/g,' ')
-            .replace(/\*/g,' ').replace(/\d+\.+/g,' ').replace(/[?!]+/g,' ')
-            .replace(/\(/g,' ( ').replace(/\)/g,' ) ');
+        // ── Bullet-proof PDN pre-processor (Aurora Borealis & all major formats)
+        //
+        // Processing order matters — each step operates on the already-cleaned str
+        // so later steps don't accidentally hit artefacts left by earlier ones.
+        //
+        // Step 1: % comment lines (Aurora Borealis uses % to start line comments)
+        str = str.replace(/^%[^\r\n]*/gm, ' ');
+        // Step 2: PGN/PDN tag pairs [Key "Value"] — match greedily over whole lines
+        str = str.replace(/^\[[^\]]*\][ \t]*/gm, ' ');
+        // Step 3: multi-line {…} block comments — must be done on the whole string
+        //         (EBNF allows them to span lines; Aurora Borealis uses them extensively)
+        //         Iteratively collapse to handle any depth of mistaken nesting.
+        let prev;
+        do { prev=str; str=str.replace(/\{[^{}]*\}/g,' '); } while (str!==prev);
+        // Step 4: Normalise all line-endings to spaces (now safe — comments stripped)
+        str = str.replace(/\r?\n/g, ' ');
+        // Step 5: NAG annotations ($0 … $255) and move quality glyphs (! ?)
+        str = str.replace(/\$\d{1,3}/g, ' ').replace(/[?!]+/g, ' ');
+        // Step 6: Game result tokens.
+        //         Must match as whole tokens (word-boundary) so "1-0" doesn't eat
+        //         the start of a move sequence like "1-5".
+        str = str.replace(/\b(1\/2-1\/2|2-0|0-2|1-1|1-0|0-1)\b/g, ' ').replace(/\*/g,' ');
+        // Step 7: Move numbers — "1." "12." "12..." "12...." — digits followed by dots
+        str = str.replace(/\d+\.+/g, ' ');
+        // Step 8: Space-pad variation delimiters
+        str = str.replace(/\(/g, ' ( ').replace(/\)/g, ' ) ');
 
-        const tokens=moveText.split(/\s+/).filter(t=>t.length>0);
-        const ns=new State(); ns.timeW=timeLimit; ns.timeB=timeLimit;
-        rootNode={ id:0,parent:null,moveStr:null,state:ns,children:[] };
-        nextNodeId=1; allNodes={ 0:rootNode };
-        let curr=rootNode, stack=[], skipped=[];
+        const tokens = str.split(/\s+/).filter(t => t.length > 0);
+
+        // ── Build game tree ───────────────────────────────────────────────────
+        // Variation stack: each '(' saves the current node so we can restore it
+        // after ')'.  Correctly handles unlimited nesting depth.
+        const ns = new State(); ns.timeW = timeLimit; ns.timeB = timeLimit;
+        rootNode    = { id:0, parent:null, moveStr:null, state:ns, children:[] };
+        nextNodeId  = 1; allNodes = { 0: rootNode };
+        let curr    = rootNode, stack = [], skipped = [];
 
         for (const tk of tokens) {
-            if (tk==='(') { stack.push(curr); curr=curr.parent||rootNode; }
-            else if (tk===')') { if(stack.length>0) curr=stack.pop(); }
-            else {
-                const found=tryMatchMove(curr.state, tk);
+            if (tk === '(') {
+                // Start of variation: record current position; step back one to
+                // the parent so the variation branch diverges from the same point
+                stack.push(curr);
+                curr = curr.parent || rootNode;
+            } else if (tk === ')') {
+                // End of variation: pop back to the saved continuation point
+                if (stack.length > 0) curr = stack.pop();
+            } else {
+                const found = tryMatchMove(curr.state, tk);
                 if (!found) { skipped.push(tk); continue; }
-                const mStr=move2Str(found);
-                const ex=curr.children.find(c=>c.moveStr===mStr);
-                if (ex) { curr=ex; } else {
-                    const ns2=curr.state.clone(); ns2.applyMove(found); ns2.timeW=timeLimit; ns2.timeB=timeLimit;
-                    const n={ id:nextNodeId++,parent:curr,moveStr:mStr,state:ns2,children:[],move:found };
-                    curr.children.push(n); allNodes[n.id]=n; curr=n;
+                const mStr = move2Str(found);
+                const ex   = curr.children.find(c => c.moveStr === mStr);
+                if (ex) {
+                    curr = ex;  // step into already-known child (deduplication)
+                } else {
+                    const ns2 = curr.state.clone();
+                    ns2.applyMove(found); ns2.timeW = timeLimit; ns2.timeB = timeLimit;
+                    const nd = { id:nextNodeId++, parent:curr, moveStr:mStr,
+                                 state:ns2, children:[], move:found };
+                    curr.children.push(nd); allNodes[nd.id] = nd; curr = nd;
                 }
             }
         }
 
-        currentNode=rootNode; gameState=currentNode.state.clone();
-        timeW=timeLimit; timeB=timeLimit;
-        gameStarted=false; gameEnded=false; isComputing=false;
-        selIdx=-1; valTgt=[]; lastM=null;
+        // ── Reset UI to initial imported position ─────────────────────────────
+        currentNode = rootNode; gameState = currentNode.state.clone();
+        timeW = timeLimit; timeB = timeLimit;
+        gameStarted = false; gameEnded = false; isComputing = false;
+        selIdx = -1; valTgt = []; lastM = null;
         stopClock();
-        document.getElementById('modal').style.display='none';
+        document.getElementById('modal').style.display = 'none';
         render();
 
-        if (skipped.length>0) {
-            const uniq=[...new Set(skipped)];
-            const safe=uniq.slice(0,6).map(t=>t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')).join(', ');
-            txtAnalysis.innerHTML=`<span style="color:#ffa726;">Importado. ${skipped.length} token(s) ignorado(s): ${safe}${uniq.length>6?'…':''}</span>`;
+        // ── Feedback ──────────────────────────────────────────────────────────
+        if (skipped.length > 0) {
+            const uniq = [...new Set(skipped)];
+            const safe = uniq.slice(0,6)
+                .map(t => t.replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                           .replace(/>/g,'&gt;').replace(/"/g,'&quot;'))
+                .join(', ');
+            txtAnalysis.innerHTML =
+                `<span style="color:#ffa726;">Importado com ${skipped.length} token(s) desconhecido(s): ${safe}${uniq.length>6?'…':''}</span>`;
         } else {
-            txtAnalysis.innerHTML=`<span style="color:#66bb6a;">Import concluído com sucesso.</span>`;
+            txtAnalysis.innerHTML =
+                `<span style="color:#66bb6a;">✓ Import concluído. ${Object.keys(allNodes).length-1} lances / variações carregados.</span>`;
         }
     }
 

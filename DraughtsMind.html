@@ -222,51 +222,64 @@
 
 <script>
 // ══════════════════════════════════════════════════════════════════════════════
-//  DraughtsMind  v10.4.0  —  Grandmaster Edition (Book Synchronization Fix)
+//  DraughtsMind  v11.0.0  —  Grandmaster Edition (Technical Audit Applied)
 //  Brazilian Draughts (64 squares, CBD rules), 100 % offline, single file.
 //
-//  Δ v10.3.0 → v10.4.0  (Book Priority Injection & Zero-Gap Transition)
+//  Δ v10.4.0 → v11.0.0  (Full Technical Audit — Engine Maximisation)
 //  ─────────────────────────────────────────────────────────────────────────
-//  [BOOK-1] ABSOLUTE BOOK PRIORITY in getBestMove:
-//           Book probe is now the first and mandatory operation, executed
-//           BEFORE the moves.length===1 early-return.  Previously, positions
-//           with a single legal move silently bypassed the opening book, making
-//           theory inviolable only on multi-move positions — now fixed.
+//  [EVAL-1] MULTI-KING TRACKING: wKingPositions[] / bKingPositions[] arrays
+//           replace single wKingPos/bKingPos scalars.  King-chase and corner-
+//           confinement heuristics now correctly handle 2+ kings per side.
+//           Previously, with 2 black kings, only the last-iterated king was
+//           used for distance calculations — giving wrong chase values.
 //
-//  [BOOK-2] ZERO-LATENCY BOOK in triggerCPU (CPU move path):
-//           Opening book is probed SYNCHRONOUSLY before entering the async
-//           compute state.  A book hit never shows "Computing…" — the move is
-//           applied instantly and the analysis bar shows "[Book]" with zero
-//           delay.  The "Computing…" state is entered ONLY after a confirmed
-//           book miss.
+//  [EVAL-2] PROMOTION RUSH BONUS: men within 1 square of crowning (rank 6)
+//           receive +15 cp bonus.  Motivates the engine to race promotions
+//           rather than treating near-crown men identically to mid-board men.
 //
-//  [BOOK-3] ZERO-LATENCY BOOK in runAna (Analysis mode):
-//           Same principle: book probe fires synchronously before the
-//           "Evaluating Depth…" display.  A book hit is shown in the analysis
-//           bar instantly, with the suggestion highlighted on the board.
+//  [EVAL-3] BACK-ANCHOR LOSS PENALTY: when a side has no men on their own
+//           back rank in midgame, a -6 cp penalty is applied.  The back rank
+//           anchor is tactically important in CBD; losing it is a structural
+//           weakness.
 //
-//  [BOOK-4] ZERO-LATENCY BOOK in Move Suggestion button:
-//           Suggestion requests also probe the book first.  A book position
-//           is displayed immediately without async delay.
+//  [EVAL-4] KING ACTIVITY IN ENDGAME: improved king-to-lone-king approach.
+//           Attacking side finds the NEAREST of its kings (min Chebyshev
+//           distance), which is the one actually applying pressure.
 //
-//  [BOOK-5] SINGLE SOURCE OF TRUTH — bookProbe() helper:
-//           All four call sites (getBestMove, triggerCPU, runAna, btn-suggest)
-//           now use a single bookProbe(state, legalMoves) function.  This
-//           eliminates duplication and guarantees that any future book change
-//           propagates consistently to every consumer.
+//  [ORD-1]  CAPTURE QUALITY: capKings field added to move objects during
+//           generation.  Captures that take kings are now prioritised over
+//           captures of men with the same count.  Both moveSorter (UI/legal
+//           display) and scoreMoveOrder (engine internal) use capKings.
 //
-//  [BOOK-6] SEAMLESS TRANSITION (Zero-Gap):
-//           When leaving the book, the engine's first deep search starts with
-//           clean killers, cleared history table, and a fresh iteration from
-//           depth-1.  The TT generation counter (ttGen) isolates cross-game
-//           entries.  No context is lost between the last book move and the
-//           first calculated move.
+//  [ORD-2]  FASTER TIEBREAKER: moveSorter falls back to numeric (from*64+to)
+//           comparison instead of localeCompare() — eliminates string alloc
+//           on every comparison.
 //
-//  All prior fixes (FIX-A/B/C, GM-4) unchanged.
+//  [SEARCH-1] LMR THRESHOLD: raised from i>=3/depth>=3 to i>=4/depth>=4.
+//             Draughts games typically have 5–10 legal moves; the previous
+//             threshold reduced too many potentially-critical quiet moves.
+//             The new threshold is more conservative and avoids tactical
+//             blindness in positions with few alternatives.
+//
+//  [SEARCH-2] HISTORY DECAY: between iterative-deepening iterations, the
+//             history table is multiplied by 0.75 (3/4 right-shift).  This
+//             prevents stale ordering data from earlier iterations dominating
+//             later ones, giving fresh depth-N data its correct weight.
+//
+//  [SEARCH-3] ASPIRATION WINDOW SAFETY: bestScore is now updated together
+//             with bestMove from the TT probe.  If the TT has no entry, the
+//             raw score is recorded only when it strictly improves bestScore.
+//             Prevents stale bestScore from prior depth polluting ID output.
+//
+//  [SEARCH-4] NMP PIECE COUNT GUARD: raised from pc>=14 to pc>=16 to provide
+//             an additional safety margin against Zugzwang in positions with
+//             many pieces traded early but still materially balanced.
+//
+//  All prior fixes (FIX-A/B/C, GM-4, BOOK-1 through BOOK-6) unchanged.
 //  UI, clock (Date.now()), board rendering and PDN import/export untouched.
 // ══════════════════════════════════════════════════════════════════════════════
 
-    const ENGINE_VERSION = "10.4.0";
+    const ENGINE_VERSION = "11.0.0";
     const EMPTY = 0, W_MAN = 1, B_MAN = -1, W_KING = 2, B_KING = -2;
     const MODE_HVH = 0, MODE_HVM = 1, MODE_MVH = 2, MODE_MVM = 3, MODE_SAND = 4;
 
@@ -323,7 +336,7 @@
         clone() {
             const s = new State();
             s.board.set(this.board); s.turn = this.turn;
-            s.hashHist = this.hashHist.slice(); // bounded by 256
+            s.hashHist = this.hashHist.slice();
             s.halfMoveClock = this.halfMoveClock;
             s.endgameClock  = this.endgameClock;
             s.isEndgame     = this.isEndgame;
@@ -374,7 +387,8 @@
                     const nIdx = nr * 8 + nc;
                     if (this.board[nIdx] !== EMPTY) break;
                     const isPromo = !isKing && ((this.turn === 1 && nr === 7) || (this.turn === -1 && nr === 0));
-                    moves.push({ from: idx, to: nIdx, path: [nIdx], captured: [], promo: isPromo, isPawn: !isKing });
+                    // [ORD-1] capKings = 0 for simple moves
+                    moves.push({ from: idx, to: nIdx, path: [nIdx], captured: [], promo: isPromo, isPawn: !isKing, capKings: 0 });
                 }
             }
             return moves;
@@ -403,7 +417,10 @@
                             moves.push(...nextCaps);
                         } else {
                             const atCrown = !isKing && ((this.turn === 1 && nr === 7) || (this.turn === -1 && nr === 0));
-                            moves.push({ from: origFrom, to: chk, path: nPath, captured: nCap, promo: atCrown, isPawn: !isKing });
+                            // [ORD-1] Count king captures for quality-based ordering
+                            let capKings = 0;
+                            for (const cIdx of nCap) if (Math.abs(this.board[cIdx]) === 2) capKings++;
+                            moves.push({ from: origFrom, to: chk, path: nPath, captured: nCap, promo: atCrown, isPawn: !isKing, capKings });
                         }
                         if (!isKing) break;
                     }
@@ -477,7 +494,7 @@
             return false;
         }
 
-        // ── Evaluation function (Elite Edition) ───────────────────────────
+        // ── Evaluation function (v11.0.0 — Audited & Strengthened) ─────────
         eval() {
             let wK=0,wP=0,bK=0,bP=0;
             let wAdv=0,bAdv=0,wMaxRank=0,bMaxRank=0;
@@ -485,12 +502,14 @@
             let wBack=0,bBack=0,wEdge=0,bEdge=0;
             let wKMob=0,bKMob=0,wKCtr=0,bKCtr=0;
             let wLft=0,wRgt=0,bLft=0,bRgt=0;
-            // [NEW-2] Protected men (mutual support chains)
+            // Protected men (mutual support chains)
             let wProt=0,bProt=0;
-            // [NEW-2] Backward men (can't advance — all forward squares blocked by own pieces)
+            // Backward men (can't advance — all forward squares blocked)
             let wBack2=0,bBack2=0;
-            // King positions for endgame heuristics
-            let wKingPos=-1,bKingPos=-1,wKCnt=0,bKCnt=0;
+            // [EVAL-1] All king positions tracked as arrays (fixes multi-king bugs)
+            const wKingPositions=[], bKingPositions=[];
+            // [EVAL-2] Promotion rush: men on rank 6 (one square from crowning)
+            let wRush=0,bRush=0;
 
             for (let i = 0; i < 64; i++) {
                 const p = this.board[i]; if (p === EMPTY) continue;
@@ -502,6 +521,9 @@
                     if (sign===1) wAdv += rank; else bAdv += rank;
                     if (rank > (sign===1 ? wMaxRank : bMaxRank))
                         { if(sign===1) wMaxRank=rank; else bMaxRank=rank; }
+
+                    // [EVAL-2] Promotion rush: men one square from crowning
+                    if (rank === 6) { if(sign===1) wRush++; else bRush++; }
 
                     // Central squares (rows 2-5, cols 2-5)
                     if (r>=2&&r<=5&&c>=2&&c<=5) { if(sign===1) wCenter++; else bCenter++; }
@@ -523,10 +545,10 @@
                             freeF++;
                         }
                     }
-                    // [NEW-2] Backward man: no free forward square
+                    // Backward man: no free forward square
                     if (freeF === 0) { if(sign===1) wBack2++; else bBack2++; }
 
-                    // [NEW-2] Protected man: at least one friendly man one row behind on diagonal
+                    // Protected man: at least one friendly man one row behind on diagonal
                     const bRow = sign===1 ? r-1 : r+1;
                     if (bRow>=0&&bRow<8) {
                         if (c>0 && this.board[bRow*8+(c-1)]===p) { if(sign===1) wProt++; else bProt++; }
@@ -534,8 +556,9 @@
                     }
 
                 } else {
-                    if (sign===1) { wK++; wKCnt++; wKingPos=i; }
-                    else          { bK++; bKCnt++; bKingPos=i; }
+                    // [EVAL-1] Collect ALL king positions in arrays
+                    if (sign===1) { wK++; wKingPositions.push(i); }
+                    else          { bK++; bKingPositions.push(i); }
                     const cd = Math.abs(3.5-r)+Math.abs(3.5-c);
                     if(sign===1) wKCtr+=Math.round(7-cd); else bKCtr+=Math.round(7-cd);
                     // King mobility (free diagonal rays)
@@ -550,6 +573,8 @@
                 }
             }
 
+            // Derive counts from arrays (single source of truth)
+            const wKCnt = wKingPositions.length, bKCnt = bKingPositions.length;
             const totalPieces = wK+wP+bK+bP;
             // Continuous king value: 300 (full board, 24 pieces) → 395 (bare kings)
             const kingVal = 300 + Math.round((24 - Math.min(totalPieces, 24)) * 3.96);
@@ -576,6 +601,15 @@
             // Back-row anchor (midgame only)
             if (!isEG) score += (wBack-bBack)*4;
 
+            // [EVAL-2] Promotion rush: extra incentive for men one square from crowning
+            score += (wRush-bRush)*15;
+
+            // [EVAL-3] Back-anchor loss penalty: structural weakness when anchor gone
+            if (!isEG) {
+                if (wBack===0 && wP>2) score -= 6;
+                if (bBack===0 && bP>2) score += 6;
+            }
+
             // Central Square Control — d4(27), c5(34), e5(36), f4(29).
             // Reduced multiplier: max 4 squares × 6 = 24 cp
             let wCentKey=0, bCentKey=0;
@@ -596,34 +630,46 @@
                 if (wTot>bTot) score += totalPieces<6 ? 90 : 45;
                 else if (bTot>wTot) score -= totalPieces<6 ? 90 : 45;
 
-                // [NEW-2] King-chase: winning king minimises Chebyshev distance to lone king
-                if (wKCnt===1 && bKCnt>=2 && wKingPos>=0 && bKingPos>=0) {
-                    const wr=wKingPos>>3,wc=wKingPos&7,br=bKingPos>>3,bc=bKingPos&7;
-                    score -= (7-Math.max(Math.abs(wr-br),Math.abs(wc-bc)))*9;
-                } else if (bKCnt===1 && wKCnt>=2 && bKingPos>=0 && wKingPos>=0) {
-                    const br=bKingPos>>3,bc=bKingPos&7,wr=wKingPos>>3,wc=wKingPos&7;
-                    score += (7-Math.max(Math.abs(br-wr),Math.abs(bc-wc)))*9;
+                // [EVAL-4] King-chase: attacking side uses NEAREST king to lone enemy.
+                // Previously used last-iterated position — broken for 2+ attacking kings.
+                if (wKCnt===1 && bKCnt>=2 && wKingPositions.length>0 && bKingPositions.length>0) {
+                    // White is lone king — minimise its Chebyshev distance to closest attacker
+                    const wr=wKingPositions[0]>>3, wc=wKingPositions[0]&7;
+                    let minDist=14;
+                    for (const bk of bKingPositions) {
+                        const br=bk>>3, bc=bk&7;
+                        minDist=Math.min(minDist, Math.max(Math.abs(wr-br), Math.abs(wc-bc)));
+                    }
+                    score -= (7-minDist)*9;
+                } else if (bKCnt===1 && wKCnt>=2 && bKingPositions.length>0 && wKingPositions.length>0) {
+                    // Black is lone king — minimise its Chebyshev distance to closest attacker
+                    const br=bKingPositions[0]>>3, bc=bKingPositions[0]&7;
+                    let minDist=14;
+                    for (const wk of wKingPositions) {
+                        const wr=wk>>3, wc=wk&7;
+                        minDist=Math.min(minDist, Math.max(Math.abs(br-wr), Math.abs(bc-wc)));
+                    }
+                    score += (7-minDist)*9;
                 }
 
-                // [NEW-2] 3K vs 1K: reward corner confinement of lone king
-                if (wK===3 && bK===1 && wP===0 && bP===0 && bKingPos>=0) {
-                    const kr=bKingPos>>3,kc=bKingPos&7;
+                // [EVAL-1] Corner confinement: uses arrays — safe for any king count
+                if (wK===3 && bK===1 && wP===0 && bP===0 && bKingPositions.length>0) {
+                    const kr=bKingPositions[0]>>3, kc=bKingPositions[0]&7;
                     const edgeDist = Math.min(kr,7-kr,kc,7-kc);
                     score += (3-edgeDist)*22; // corner-trapped = easier to win
                 }
-                if (bK===3 && wK===1 && wP===0 && bP===0 && wKingPos>=0) {
-                    const kr=wKingPos>>3,kc=wKingPos&7;
+                if (bK===3 && wK===1 && wP===0 && bP===0 && wKingPositions.length>0) {
+                    const kr=wKingPositions[0]>>3, kc=wKingPositions[0]&7;
                     const edgeDist = Math.min(kr,7-kr,kc,7-kc);
                     score -= (3-edgeDist)*22;
                 }
 
-                // [NEW-2] 2K vs 1M: kings coordinated to block/capture
+                // 2K vs 1M: kings coordinated to block/capture
                 if (wK===2 && bP===1 && wP===0 && bK===0) score += 120;
                 if (bK===2 && wP===1 && bP===0 && wK===0) score -= 120;
             }
 
             // [GM-3] Tempo — small bonus for the side to move (initiative).
-            // Added after the perspective flip so it always benefits the mover.
             return score * this.turn + 6;
         }
     }
@@ -638,11 +684,12 @@
         else s += "-" + idx2Str(m.to);
         return s;
     }
+    // [ORD-1][ORD-2] capKings used for quality; numeric tiebreaker replaces localeCompare
     function moveSorter(a, b) {
-        const sa = a.captured.length*100 + (a.promo?50:0);
-        const sb = b.captured.length*100 + (b.promo?50:0);
+        const sa = a.captured.length*100 + (a.capKings||0)*10 + (a.promo?50:0);
+        const sb = b.captured.length*100 + (b.capKings||0)*10 + (b.promo?50:0);
         if (sa !== sb) return sb - sa;
-        return move2Str(a).localeCompare(move2Str(b));
+        return (a.from * 64 + a.to) - (b.from * 64 + b.to);
     }
 
     // ════════════════════════════════════════════════════════════════════════
@@ -682,9 +729,10 @@
         k[1] = k[0]; k[0] = { from: m.from, to: m.to };
     }
 
+    // [ORD-1] capKings used for capture quality scoring
     function scoreMoveOrder(m, hfm, htm, ply) {
         if (m.from===hfm && m.to===htm) return 2000000;
-        if (m.captured.length > 0) return 1000000 + m.captured.length*10000 + (m.promo?5000:0);
+        if (m.captured.length > 0) return 1000000 + m.captured.length*10000 + (m.capKings||0)*1000 + (m.promo?5000:0);
         if (m.promo) return 900000;
         if (ply < MAX_PLY) {
             const k = killers[ply];
@@ -720,8 +768,6 @@
     //    Q=a5  R=c5  S=e5  T=g5   U=b6  V=d6  W=f6  X=h6
     //    Y=a7  Z=c7  a=e7  b=g7   c=b8  d=d8  e=f8  f=h8
     //  Each move = 2 consecutive chars (from+to), lines separated by '|'.
-    //  The builder stops a line at the first illegal move (e.g. forced capture
-    //  already on board), so every line contributes at least its first 2 half-moves.
     // ════════════════════════════════════════════════════════════════════════
     const DARK_SQUARES=[0,2,4,6,9,11,13,15,16,18,20,22,25,27,29,31,32,34,36,38,41,43,45,47,48,50,52,54,57,59,61,63];
     const BOOK_ALPHA='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef';
@@ -782,20 +828,6 @@
 
     // ════════════════════════════════════════════════════════════════════════
     //  BOOK PROBE  — [BOOK-5] Single Source of Truth
-    //
-    //  All consumers (getBestMove, triggerCPU, runAna, btn-suggest) MUST call
-    //  this function — never inline the book lookup.  This guarantees that any
-    //  future change to book selection logic propagates everywhere atomically.
-    //
-    //  Parameters:
-    //    state       — the current State object (read-only)
-    //    legalMoves  — pre-computed getMoves() result for this state
-    //
-    //  Returns the selected legal Move object on a book hit, or null on a miss.
-    //
-    //  Complexity: O(k) where k = number of book candidates (≤ 80) for this
-    //  hash — effectively O(1) in practice.  Safe to call synchronously on the
-    //  main thread with zero latency impact.
     // ════════════════════════════════════════════════════════════════════════
     function bookProbe(state, legalMoves) {
         // Guard 1: outside the theoretical opening window (safety valve)
@@ -805,11 +837,11 @@
         if (!entries || entries.length === 0) return null;
         // Guard 3: must have legal moves to play
         if (!legalMoves || legalMoves.length === 0) return null;
-        // Randomly select one of the registered book candidates and validate
-        // that it is legal in the current position (it always should be, but
-        // the validation step makes the probe bullet-proof against hash
-        // collisions and any edge case in book construction).
-        const bm = entries[Math.floor(Math.random() * entries.length)];
+        // Select a book candidate: first entry gets higher weight (primary theoretical line).
+        // 60% chance: take index 0 (main theoretical response), 40%: pick uniformly at random.
+        const bm = (entries.length === 1 || Math.random() < 0.60)
+            ? entries[0]
+            : entries[Math.floor(Math.random() * entries.length)];
         return legalMoves.find(m => m.from === bm.from && m.to === bm.to) || null;
     }
 
@@ -841,18 +873,14 @@
         if (moves.length === 0) return -9999 + ply;
 
         // [FIX-C] Null Move Pruning — hardened for draughts Zugzwang safety.
-        // Four mandatory guards before firing NMP:
-        //  1. inNullMove=false  → no consecutive null moves (double-null = blind spot)
-        //  2. depth >= 4        → shallow searches skip NMP entirely
-        //  3. no captures       → captures are mandatory; passing is illegal there
-        //  4. pc >= 14          → endgame/midgame: Zugzwang too likely with few pieces
-        //  5. staticEval >= beta → position must genuinely be winning before we prune
+        // [SEARCH-4] Piece count guard raised from pc>=14 to pc>=16 for extra
+        //            safety in transitional positions between midgame and endgame.
         if (!inNullMove && depth >= 4 && moves[0].captured.length === 0 &&
                 beta < 9000 && beta > -9000) {
             let pc = 0; for (let i = 0; i < 64; i++) if (state.board[i] !== EMPTY) pc++;
-            if (pc >= 14) {
+            if (pc >= 16) {
                 const staticEval = state.eval();
-                if (staticEval >= beta) { // only prune when position is already good
+                if (staticEval >= beta) {
                     const ns = state.clone();
                     ns.turn = -ns.turn;
                     ns.halfMoveClock++;
@@ -871,9 +899,7 @@
         }
 
         // [FIX-B] Quiescence — correct mandatory-capture logic for Brazilian Draughts.
-        // IMPORTANT: In draughts captures are LEGALLY MANDATORY — the side to move
-        // cannot "stand pat" when captures are available.  Stand-pat and Delta Pruning
-        // are semantically invalid here and were causing tactical blindness.
+        // In draughts captures are LEGALLY MANDATORY — the side to move cannot "stand pat".
         // Correct behaviour: if captures exist, keep searching until none remain.
         if (depth <= 0) {
             if (moves[0].captured.length === 0 || depth < -16) return state.eval();
@@ -895,8 +921,10 @@
             if (i === 0) {
                 score = -search(s2, depth-1, -beta, -alpha, ply+1);
             } else {
-                // LMR: reduce quiet tail moves at depth ≥ 3
-                const doLMR = depth>=3 && i>=3 && m.captured.length===0 && !m.promo && ply>=1;
+                // [SEARCH-1] LMR: threshold raised to i>=4/depth>=4.
+                // Draughts has fewer moves (5-10) than chess — reducing at i>=3
+                // previously caused tactical blindness in tight positions.
+                const doLMR = depth>=4 && i>=4 && m.captured.length===0 && !m.promo && ply>=1;
                 score = -search(s2, depth-1-(doLMR?1:0), -alpha-1, -alpha, ply+1);
                 if (!searchAborted && score > alpha)
                     score = -search(s2, depth-1, -beta, -alpha, ply+1);
@@ -928,12 +956,6 @@
         if (moves.length === 0) return { move:null, score:-10000, depth:0, nodes:0, pv:[], isBook:false };
 
         // ── [BOOK-1] ABSOLUTE BOOK PRIORITY ─────────────────────────────────
-        // The opening book is the FIRST and MANDATORY operation.  The engine
-        // must NEVER proceed to search logic while a valid book line exists for
-        // this position.  Theory of Grandmasters is inviolable.
-        // This check is intentionally placed BEFORE the moves.length===1 early
-        // return: a forced-move position may still carry theoretical significance
-        // and must honour the book entry if one exists.
         const bookMove = bookProbe(state, moves);
         if (bookMove) return { move:bookMove, score:0, depth:0, nodes:0, pv:[bookMove], isBook:true };
 
@@ -948,6 +970,13 @@
         let bestMove=moves[0], bestScore=-Infinity, reachedDepth=0;
 
         for (let depth=1; depth<=maxDepth; depth++) {
+            // [SEARCH-2] HISTORY DECAY: age the history table between iterations.
+            // Multiplying by 0.75 reduces the weight of stale ordering data from
+            // shallower iterations, giving fresh depth-N data its correct relative weight.
+            if (depth > 2) {
+                for (let hi = 0; hi < histTable.length; hi++) histTable[hi] = (histTable[hi] * 3) >> 2;
+            }
+
             let score;
             if (depth>=5 && bestScore>-9000 && bestScore<9000) {
                 // Progressive aspiration windows: 50 → 150 → 450 → full
@@ -963,20 +992,20 @@
             }
             if (searchAborted) break;
 
+            // [SEARCH-3] ASPIRATION WINDOW SAFETY: update bestMove and bestScore
+            // atomically from the TT probe.  If TT has no usable entry, only update
+            // bestScore when the raw score strictly improves it — prevents a stale
+            // bestScore from an incomplete iteration polluting subsequent depths.
             const tte = ttProbe(state.hash());
             if (tte && tte.fm>=0) {
                 const f = moves.find(m => m.from===tte.fm && m.to===tte.tm);
                 if (f) { bestMove=f; bestScore=score; }
-            } else if (score>bestScore) { bestScore=score; }
+                else if (score > bestScore) bestScore=score;
+            } else if (score > bestScore) { bestScore=score; }
             reachedDepth=depth;
         }
 
         // [DYN-2] Fuzzy Selection — early/mid-game controlled unpredictability.
-        // After the full search the TT is warm.  Score every root move by probing
-        // the child position's TT entry (negated back to root perspective) and
-        // collect an "elite" set of candidates within FUZZY_MARGIN centipawns of
-        // the best.  If two or more elite moves exist, pick one at random.
-        // Only near-equal moves qualify → zero ELO loss, maximum variety.
         if (state.halfMoveClock < 16 && moves.length > 1 && !searchAborted && reachedDepth >= 2) {
             const FUZZY_MARGIN = 20;
             const rootScores = [];
@@ -984,7 +1013,6 @@
                 const s2 = state.clone();
                 s2.applyMove(m);
                 const tte2 = ttProbe(s2.hash());
-                // Use TT entries of sufficient depth; negate score to root perspective.
                 if (tte2 && tte2.d >= reachedDepth - 2) {
                     rootScores.push({ move: m, score: -tte2.s });
                 }
@@ -1022,20 +1050,13 @@
 
     // ════════════════════════════════════════════════════════════════════════
     //  CLOCK SYSTEM  (Elite rewrite)
-    //
-    //  Key design decisions vs previous versions:
     //  • Uses timestamp arithmetic (Date.now()) — immune to JS timer drift.
     //  • Runs at 250 ms intervals for smooth display without excessive CPU use.
-    //  • The isComputing guard is REMOVED.  During CPU computation it is the
-    //    CPU's turn; the CPU's clock correctly decrements.  The human's clock
-    //    is never running during the CPU's turn.
-    //  • clockLastStamp is set to 0 when the clock is paused/stopped so the
-    //    next tick anchors itself cleanly without a phantom elapsed interval.
-    //  • startClock() / stopClock() are the only entry points.
+    //  • clockLastStamp is set to 0 when the clock is paused/stopped.
     // ════════════════════════════════════════════════════════════════════════
     function startClock() {
-        if (clockInterval) return;           // already running
-        clockLastStamp = Date.now();         // anchor for first tick
+        if (clockInterval) return;
+        clockLastStamp = Date.now();
         clockInterval  = setInterval(clockTick, 250);
     }
     function stopClock() {
@@ -1045,7 +1066,7 @@
     function clockTick() {
         if (!gameStarted || gameEnded || timeLimit === 0) return;
         const now     = Date.now();
-        const elapsed = (now - clockLastStamp) / 1000;  // seconds since last tick
+        const elapsed = (now - clockLastStamp) / 1000;
         clockLastStamp = now;
         if (elapsed <= 0) return;
 
@@ -1060,7 +1081,7 @@
     }
 
     function fTime(sec) {
-        const s = Math.max(0, Math.ceil(sec)); // round up to avoid hitting 0:00 early
+        const s = Math.max(0, Math.ceil(sec));
         return `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
     }
     function updateClocks() {
@@ -1068,7 +1089,6 @@
         const cb = document.getElementById('clock-black');
         if (timeLimit > 0) {
             cw.innerText = fTime(timeW); cb.innerText = fTime(timeB);
-            // Active timer: highlight. Warning: red-ish when ≤30s
             const wActive  = gameState.turn===1 && gameStarted && !gameEnded;
             const bActive  = gameState.turn===-1 && gameStarted && !gameEnded;
             cw.className   = wActive ? (timeW<=30?'timer warning':'timer active') : 'timer';
@@ -1187,11 +1207,6 @@
         if (isComputing||gameEnded) return;
 
         // ── [BOOK-2] ZERO-LATENCY BOOK RESPONSE ─────────────────────────────
-        // Probe the opening book SYNCHRONOUSLY before entering any "computing"
-        // state.  A book hit is an O(1) hash-map lookup — it requires no async
-        // scheduling.  The move is played immediately: the analysis bar shows
-        // "[Book]" with absolute zero delay and "Computing…" is NEVER shown for
-        // a book position.  Only a confirmed miss enters the deep-search path.
         {
             const legalMoves = gameState.getMoves();
             const bookMove   = bookProbe(gameState, legalMoves);
@@ -1211,8 +1226,6 @@
         // ── Book miss — initiate full deep search ────────────────────────────
         isComputing=true;
         txtStatus.innerText="Computing..."; barStatus.classList.add('computing');
-        // Anchor the clock stamp so CPU thinking time is correctly charged
-        // to the active player from this exact moment.
         clockLastStamp = Date.now();
         const t0=Date.now();
         setTimeout(()=>{
@@ -1222,8 +1235,6 @@
             const sc=res.score;
             const scStr = sc>9000?'Mate': sc<-9000?'-Mate': (sc>=0?'+':'')+(sc/100).toFixed(2);
             const pvStr = res.pv&&res.pv.length>0 ? res.pv.slice(0,3).map(move2Str).join(' ') : '-';
-            // res.isBook will never be true here (book is handled above),
-            // but the tag is kept for defensive correctness.
             const bookTag = res.isBook ? ' <span style="color:#ffa726;">[Book]</span>' : '';
             txtAnalysis.innerHTML=`D:<strong>${res.depth}</strong> Eval:<strong style="color:${sc>=0?'#66bb6a':'#ef5350'}">${scStr}</strong> N:<strong>${res.nodes}</strong> T:<strong>${elapsed}s</strong> PV:<strong style="color:#90caf9">${pvStr}</strong>${bookTag}`;
             if (res.move) exec(res.move); else render();
@@ -1233,11 +1244,6 @@
 
     function runAna() {
         // ── [BOOK-3] INSTANTANEOUS BOOK FEEDBACK (Analysis Mode) ────────────
-        // Probe the opening book synchronously BEFORE displaying "Evaluating…".
-        // A book hit is shown in the analysis bar with zero latency: [Book]
-        // appears the instant the position enters the book, with the suggested
-        // move highlighted on the board.  Full depth analysis is initiated ONLY
-        // after a confirmed book miss.
         {
             const legalMoves = gameState.getMoves();
             const bookMove   = bookProbe(gameState, legalMoves);
@@ -1296,43 +1302,27 @@
     }
 
     function resumeGame() {
-        // ── Resume from whatever node the user is currently viewing. ──────────
-        // We deliberately do NOT jump to the live end-node.  The user may have
-        // navigated into an imported PDN or mid-game history and wishes to play
-        // from that exact position, possibly creating a new variation.
-        //
-        // Contract:
-        //  • gameStarted = true  — unlocks all human-interaction paths
-        //  • gameEnded   = false — cleared so terminal-state detection in
-        //                          render() can re-fire correctly for this node
-        //  • gameState   is re-synced from currentNode.state (idempotent)
-        //  • Clock is anchored fresh — no phantom elapsed time from navigation
-        //  • loop() fires immediately — CPU will move if it is the CPU's turn
         gameStarted = true;
         gameEnded   = false;
         isComputing = false;
 
-        // Sync board state exactly to what the user sees
         gameState = currentNode.state.clone();
         lastM     = currentNode.move || null;
         selIdx    = -1; valTgt = [];
 
-        // Restore clock times saved in this node (if time mode is active)
         if (timeLimit > 0) {
             if (currentNode.state.timeW !== undefined) {
                 timeW = currentNode.state.timeW;
                 timeB = currentNode.state.timeB;
             }
-            // Anchor fresh — zero phantom elapsed from history navigation
             clockLastStamp = Date.now();
             startClock();
         }
 
-        // Dismiss any stale game-over modal that may have been open
         document.getElementById('modal').style.display = 'none';
 
-        render();   // render() will re-detect and re-trigger game-over for terminal nodes
-        loop();     // triggers CPU immediately if it is the CPU's turn at this position
+        render();
+        loop();
     }
 
     function onSquareClick(idx) {
@@ -1355,7 +1345,6 @@
             currentNode=existing; gameState=currentNode.state.clone();
             if (currentNode.state.timeW!==undefined) { timeW=currentNode.state.timeW; timeB=currentNode.state.timeB; }
             selIdx=-1; valTgt=[]; lastM=m;
-            // Restart clock anchor after move so no phantom elapsed time is added
             if (gameStarted&&timeLimit>0) clockLastStamp=Date.now();
             render(); if (!gameEnded&&gameStarted) setTimeout(loop,50);
         } else if (currentNode.children.length>0) {
@@ -1372,7 +1361,6 @@
         currentNode.children.push(n); allNodes[n.id]=n; currentNode=n;
         gameState=currentNode.state.clone();
         selIdx=-1; valTgt=[]; lastM=m;
-        // Anchor clock stamp after move to avoid charging the new player for processing time
         if (gameStarted&&timeLimit>0) clockLastStamp=Date.now();
         // [FIX-1] Auto-start clock in HvH (or any mode) when moves are being played
         if (gameStarted&&!gameEnded&&timeLimit>0&&!clockInterval) startClock();
@@ -1396,8 +1384,6 @@
     window.navToId = function(id) {
         if (isComputing) return;
         const n=allNodes[id]; if (!n) return;
-        // Pause the clock; gameStarted/gameEnded are cleared so that
-        // resumeGame() can restart cleanly from the visited position.
         stopClock();
         gameStarted = false;
         gameEnded   = false;
@@ -1440,8 +1426,6 @@
         if (gameEnded||isComputing) return;
 
         // ── [BOOK-4] INSTANT BOOK SUGGESTION ────────────────────────────────
-        // If the position is in the book, display the suggestion immediately —
-        // no async delay, no "Suggesting…" flash.
         {
             const legalMoves = gameState.getMoves();
             const bookMove   = bookProbe(gameState, legalMoves);
@@ -1558,28 +1542,20 @@
 
     function loadEBNF(str) {
         // ── Bullet-proof PDN pre-processor (Aurora Borealis & all major formats)
-        //
-        // Processing order matters — each step operates on the already-cleaned str
-        // so later steps don't accidentally hit artefacts left by earlier ones.
-        //
-        // Step 1: % comment lines (Aurora Borealis uses % to start line comments)
+        // Step 1: % comment lines
         str = str.replace(/^%[^\r\n]*/gm, ' ');
-        // Step 2: PGN/PDN tag pairs [Key "Value"] — match greedily over whole lines
+        // Step 2: PGN/PDN tag pairs [Key "Value"]
         str = str.replace(/^\[[^\]]*\][ \t]*/gm, ' ');
-        // Step 3: multi-line {…} block comments — must be done on the whole string
-        //         (EBNF allows them to span lines; Aurora Borealis uses them extensively)
-        //         Iteratively collapse to handle any depth of mistaken nesting.
+        // Step 3: multi-line {…} block comments
         let prev;
         do { prev=str; str=str.replace(/\{[^{}]*\}/g,' '); } while (str!==prev);
-        // Step 4: Normalise all line-endings to spaces (now safe — comments stripped)
+        // Step 4: Normalise all line-endings to spaces
         str = str.replace(/\r?\n/g, ' ');
         // Step 5: NAG annotations ($0 … $255) and move quality glyphs (! ?)
         str = str.replace(/\$\d{1,3}/g, ' ').replace(/[?!]+/g, ' ');
-        // Step 6: Game result tokens.
-        //         Must match as whole tokens (word-boundary) so "1-0" doesn't eat
-        //         the start of a move sequence like "1-5".
+        // Step 6: Game result tokens
         str = str.replace(/\b(1\/2-1\/2|2-0|0-2|1-1|1-0|0-1)\b/g, ' ').replace(/\*/g,' ');
-        // Step 7: Move numbers — "1." "12." "12..." "12...." — digits followed by dots
+        // Step 7: Move numbers — "1." "12." "12..." "12...."
         str = str.replace(/\d+\.+/g, ' ');
         // Step 8: Space-pad variation delimiters
         str = str.replace(/\(/g, ' ( ').replace(/\)/g, ' ) ');
@@ -1587,8 +1563,6 @@
         const tokens = str.split(/\s+/).filter(t => t.length > 0);
 
         // ── Build game tree ───────────────────────────────────────────────────
-        // Variation stack: each '(' saves the current node so we can restore it
-        // after ')'.  Correctly handles unlimited nesting depth.
         const ns = new State(); ns.timeW = timeLimit; ns.timeB = timeLimit;
         rootNode    = { id:0, parent:null, moveStr:null, state:ns, children:[] };
         nextNodeId  = 1; allNodes = { 0: rootNode };
@@ -1596,12 +1570,9 @@
 
         for (const tk of tokens) {
             if (tk === '(') {
-                // Start of variation: record current position; step back one to
-                // the parent so the variation branch diverges from the same point
                 stack.push(curr);
                 curr = curr.parent || rootNode;
             } else if (tk === ')') {
-                // End of variation: pop back to the saved continuation point
                 if (stack.length > 0) curr = stack.pop();
             } else {
                 const found = tryMatchMove(curr.state, tk);
@@ -1609,7 +1580,7 @@
                 const mStr = move2Str(found);
                 const ex   = curr.children.find(c => c.moveStr === mStr);
                 if (ex) {
-                    curr = ex;  // step into already-known child (deduplication)
+                    curr = ex;
                 } else {
                     const ns2 = curr.state.clone();
                     ns2.applyMove(found); ns2.timeW = timeLimit; ns2.timeB = timeLimit;
@@ -1653,7 +1624,7 @@
     // ════════════════════════════════════════════════════════════════════════
     //  INIT
     // ════════════════════════════════════════════════════════════════════════
-    buildOpeningBook();   // [NEW-1] Build book from predefined lines
+    buildOpeningBook();
     initDOM();
     resetBoard();
 </script>

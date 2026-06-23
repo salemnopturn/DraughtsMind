@@ -1,99 +1,569 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DraughtsMind - Elite Edition</title>
+    <title>DraughtsMind</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            background-color: #0f0f0f; color: #d4d4d4;
-            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-            display: flex; justify-content: center; align-items: center;
-            min-height: 100vh; padding: 1.5rem; font-size: 14px;
+        /* ── Design System ────────────────────────────────────────────────── */
+        :root {
+            --bg-deep:        #0c0d11;
+            --bg-surface:     #12141b;
+            --bg-panel:       #191c27;
+            --bg-raised:      #22263a;
+            --bg-input:       #0f1117;
+
+            --border-faint:   #1e2133;
+            --border-subtle:  #292e45;
+            --border-normal:  #363d58;
+
+            --gold-bright:    #d4a843;
+            --gold-mid:       #b8902e;
+            --gold-dim:       #6b5218;
+            --gold-glow:      rgba(212, 168, 67, 0.4);
+
+            --blue-bright:    #5499ff;
+            --blue-mid:       #2463eb;
+            --blue-dim:       #1a3a8a;
+
+            --green:          #22c55e;
+            --green-glow:     rgba(34, 197, 94, 0.25);
+            --orange:         #f59e0b;
+            --orange-glow:    rgba(245, 158, 11, 0.3);
+            --red:            #ef4444;
+
+            --text-primary:   #e8ecf5;
+            --text-secondary: #8591a8;
+            --text-muted:     #48526a;
+
+            --sq-light:       #e9d7ac;
+            --sq-dark:        #6b3d1b;
+            --board-border:   #221005;
+
+            --radius-sm:      5px;
+            --radius-md:      9px;
+            --radius-lg:      13px;
+
+            --t-fast:         0.15s ease;
+            --t-med:          0.25s ease;
+            --t-slow:         0.45s ease;
         }
-        .container { display: grid; grid-template-columns: 1fr 340px; gap: 2rem; width: 100%; max-width: 900px; }
-        @media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
-        .board-wrapper { width: 100%; max-width: 480px; margin: 0 auto; }
-        .board-ratio { padding-bottom: 100%; position: relative; width: 100%; }
+
+        /* ── Reset ────────────────────────────────────────────────────────── */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-deep);
+            background-image:
+                radial-gradient(ellipse at 15% 8%,  rgba(212,168,67,0.05) 0%, transparent 55%),
+                radial-gradient(ellipse at 85% 92%, rgba(36,99,235,0.05)  0%, transparent 55%);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, ui-sans-serif, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: clamp(0.75rem, 2vw, 1.75rem);
+            font-size: clamp(13px, 1.4vw, 15px);
+            line-height: 1.5;
+        }
+
+        /* ── Layout ───────────────────────────────────────────────────────── */
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 345px;
+            gap: clamp(1rem, 2.5vw, 2rem);
+            width: 100%;
+            max-width: 990px;
+            align-items: start;
+        }
+        @media (max-width: 900px)  { .container { grid-template-columns: 1fr 305px; } }
+        @media (max-width: 720px)  { .container { grid-template-columns: 1fr; } }
+        @media (min-width: 1200px) { .container { max-width: 1130px; grid-template-columns: 1fr 410px; } }
+
+        /* ── Board wrapper ────────────────────────────────────────────────── */
+        .board-wrapper {
+            width: 100%;
+            max-width: clamp(320px, 90vw, 560px);
+            margin: 0 auto;
+        }
+
+        .board-ratio {
+            padding-bottom: 100%;
+            position: relative;
+            width: 100%;
+        }
+
         .board {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            display: grid; grid-template-columns: repeat(8, 12.5%); grid-template-rows: repeat(8, 12.5%);
-            border: 6px solid #2d1810; background-color: #d2b48c; border-radius: 4px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8); transition: transform 0.5s ease;
+            display: grid;
+            grid-template-columns: repeat(8, 12.5%);
+            grid-template-rows: repeat(8, 12.5%);
+            border: clamp(4px, 1.1vw, 7px) solid var(--board-border);
+            outline: 1px solid var(--gold-dim);
+            outline-offset: -1px;
+            background-color: var(--sq-dark);
+            border-radius: var(--radius-sm);
+            box-shadow:
+                0 0 0 1px var(--gold-dim),
+                0 16px 50px rgba(0,0,0,0.9),
+                0 4px 20px rgba(0,0,0,0.6),
+                inset 0 1px 0 rgba(255,255,255,0.04);
+            transition: transform var(--t-slow);
         }
+
         .board.rotated { transform: rotate(180deg); }
-        .square { position: relative; width: 100%; height: 100%; }
-        .sq-light { background-color: #e6cba8; }
-        .sq-dark  { background-color: #8b5a2b; }
-        .sq-dark.highlight  { box-shadow: inset 0 0 0 3px #29b6f6; }
-        .sq-dark.suggestion { box-shadow: inset 0 0 0 3px #66bb6a; }
-        .sq-dark.last-move  { box-shadow: inset 0 0 0 3px #ffa726; }
+
+        /* ── Squares ──────────────────────────────────────────────────────── */
+        .square {
+            position: relative;
+            width: 100%; height: 100%;
+            transition: box-shadow var(--t-fast);
+        }
+
+        .sq-light { background-color: var(--sq-light); }
+        .sq-dark  { background-color: var(--sq-dark); }
+
+        .sq-dark.highlight {
+            box-shadow: inset 0 0 0 clamp(2px, 0.5vw, 4px) var(--blue-bright);
+            background-color: #7a4220;
+        }
+        .sq-dark.suggestion {
+            box-shadow: inset 0 0 0 clamp(2px, 0.5vw, 4px) var(--green);
+            background-color: #5a3618;
+        }
+        .sq-dark.suggestion::after {
+            content: '';
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 28%; height: 28%;
+            border-radius: 50%;
+            background: var(--green);
+            opacity: 0.55;
+            pointer-events: none;
+        }
+        .sq-dark.last-move {
+            box-shadow: inset 0 0 0 clamp(2px, 0.5vw, 4px) var(--gold-bright);
+            background-color: #6a3c14;
+        }
+
+        /* ── Pieces ───────────────────────────────────────────────────────── */
         .piece {
-            position: absolute; top: 12%; left: 12%; width: 76%; height: 76%;
-            border-radius: 50%; cursor: pointer; transition: transform 0.1s;
-            z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+            position: absolute;
+            top: 9%; left: 9%; width: 82%; height: 82%;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 10;
+            transition: transform var(--t-fast), box-shadow var(--t-fast);
         }
-        .piece:active { transform: scale(0.9); }
-        .board.rotated .piece { transform: rotate(180deg); }
-        .board.rotated .piece:active { transform: rotate(180deg) scale(0.9); }
-        .piece.white { background-color: #f0f0f0; border: 2px solid #9e9e9e; }
-        .piece.black { background-color: #1a1a1a; border: 2px solid #000; }
+
+        .piece:hover  { transform: scale(1.07); }
+        .piece:active { transform: scale(0.92); }
+
+        .board.rotated .piece        { transform: rotate(180deg); }
+        .board.rotated .piece:hover  { transform: rotate(180deg) scale(1.07); }
+        .board.rotated .piece:active { transform: rotate(180deg) scale(0.92); }
+
+        /* White piece */
+        .piece.white {
+            background: radial-gradient(circle at 30% 26%,
+                #ffffff 0%, #ebebeb 30%, #cccccc 60%, #aaaaaa 100%);
+            border: 2px solid rgba(160,160,160,0.55);
+            box-shadow:
+                0 5px 12px rgba(0,0,0,0.55),
+                0 1px 4px rgba(0,0,0,0.35),
+                inset 0 3px 5px rgba(255,255,255,0.95),
+                inset 0 -2px 4px rgba(0,0,0,0.18);
+        }
+
+        /* Black piece */
+        .piece.black {
+            background: radial-gradient(circle at 30% 26%,
+                #505050 0%, #2c2c2c 38%, #141414 68%, #080808 100%);
+            border: 2px solid rgba(0,0,0,0.85);
+            box-shadow:
+                0 5px 12px rgba(0,0,0,0.7),
+                0 1px 4px rgba(0,0,0,0.5),
+                inset 0 3px 5px rgba(130,130,130,0.28),
+                inset 0 -2px 4px rgba(0,0,0,0.42);
+        }
+
+        /* ── King crown — large and dominant ─────────────────────────────── */
         .piece.king::after {
-            content: ''; position: absolute; top: 20%; bottom: 20%; left: 15%; right: 15%;
-            background-size: contain; background-repeat: no-repeat; background-position: center;
+            content: '♛';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: clamp(1.5rem, 4.8vmin, 3rem);
+            line-height: 1;
+            pointer-events: none;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.65));
         }
+
         .piece.white.king::after {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23757575'%3E%3Cpath d='M3 6l4 5 5-7 5 7 4-5-2 12H5L3 6z'/%3E%3C/svg%3E");
+            color: #1e1e1e;
+            text-shadow:
+                0 1px 0 rgba(255,255,255,0.9),
+                0 0 10px rgba(0,0,0,0.25);
         }
+
         .piece.black.king::after {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23616161'%3E%3Cpath d='M3 6l4 5 5-7 5 7 4-5-2 12H5L3 6z'/%3E%3C/svg%3E");
+            color: var(--gold-bright);
+            text-shadow:
+                0 1px 3px rgba(0,0,0,0.9),
+                0 0 14px var(--gold-glow),
+                0 0 28px rgba(212,168,67,0.2);
         }
-        .controls { display: flex; flex-direction: column; gap: 1rem; }
-        .panel { background: #1a1a1a; border: 1px solid #333; border-radius: 6px; padding: 1rem; }
-        .row { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
-        .col { display: flex; flex-direction: column; gap: 0.4rem; }
-        h1 { font-size: 1.4rem; text-align: center; color: #fff; letter-spacing: 2px; margin-bottom: 0.5rem; }
-        label { font-size: 0.7rem; color: #888; text-transform: uppercase; font-weight: bold; }
+
+        /* ── Controls ─────────────────────────────────────────────────────── */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: clamp(0.75rem, 1.5vw, 1.1rem);
+        }
+
+        .panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: clamp(0.875rem, 1.8vw, 1.25rem);
+            box-shadow:
+                0 2px 14px rgba(0,0,0,0.45),
+                inset 0 1px 0 rgba(255,255,255,0.03);
+            transition: border-color var(--t-med);
+        }
+
+        .panel:hover { border-color: var(--border-normal); }
+
+        .row { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; }
+        .col { display: flex; flex-direction: column; gap: 0.45rem; }
+
+        /* ── Typography ───────────────────────────────────────────────────── */
+        h1 {
+            font-size: clamp(1.15rem, 3.2vw, 1.65rem);
+            text-align: center;
+            letter-spacing: 0.2em;
+            font-weight: 700;
+            margin-bottom: 0.2rem;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--gold-bright) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .version-badge {
+            text-align: center;
+            font-size: clamp(0.58rem, 1.1vw, 0.68rem);
+            color: var(--gold-mid);
+            margin-bottom: 0.65rem;
+            letter-spacing: 0.16em;
+            font-weight: 600;
+            text-transform: uppercase;
+            opacity: 0.9;
+        }
+
+        label {
+            font-size: 0.67rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+        }
+
+        /* ── Form elements ────────────────────────────────────────────────── */
         select, textarea, .btn {
-            width: 100%; padding: 0.5rem; background: #121212; color: #e0e0e0;
-            border: 1px solid #333; border-radius: 4px; font-family: inherit; font-size: 0.8rem;
+            width: 100%;
+            padding: 0.5rem 0.65rem;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            font-size: clamp(0.72rem, 1.6vw, 0.82rem);
+            transition: border-color var(--t-fast), box-shadow var(--t-fast);
+            outline: none;
         }
-        .btn { background: #2c3e50; border-color: #34495e; cursor: pointer; font-weight: bold; text-align: center; }
-        .btn:hover { background: #34495e; }
-        .btn-primary { background: #0277bd; border-color: #01579b; }
-        .btn-primary:hover { background: #0288d1; }
-        .btn-success { background: #2e7d32; border-color: #1b5e20; }
-        .btn-nav { background: #424242; border-color: #616161; font-size: 1rem; padding: 0.3rem; flex: 1; }
-        .btn-nav:hover { background: #616161; }
-        textarea { height: 60px; resize: none; color: #66bb6a; }
+
+        select {
+            cursor: pointer;
+            -webkit-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238591a8'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.65rem center;
+            background-size: 8px 5px;
+            padding-right: 1.9rem;
+        }
+
+        select:hover, select:focus {
+            border-color: var(--border-normal);
+            box-shadow: 0 0 0 2px rgba(84,153,255,0.12);
+        }
+
+        /* ── Buttons ──────────────────────────────────────────────────────── */
+        .btn {
+            background: var(--bg-raised);
+            border-color: var(--border-normal);
+            cursor: pointer;
+            font-weight: 600;
+            text-align: center;
+            transition:
+                background var(--t-fast),
+                border-color var(--t-fast),
+                transform var(--t-fast),
+                box-shadow var(--t-fast);
+            user-select: none;
+        }
+
+        .btn:hover {
+            background: #2c3248;
+            border-color: #48527a;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+        }
+
+        .btn:active {
+            transform: translateY(1px) scale(0.99);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+        }
+
+        .btn-primary {
+            background: var(--blue-mid);
+            border-color: #1a3cac;
+            color: #fff;
+            box-shadow: 0 2px 10px rgba(36,99,235,0.28);
+        }
+        .btn-primary:hover {
+            background: #3b82f6;
+            border-color: #2463eb;
+            box-shadow: 0 4px 16px rgba(36,99,235,0.42);
+        }
+
+        .btn-success {
+            background: #156f38;
+            border-color: #145e30;
+            color: #fff;
+            box-shadow: 0 2px 10px rgba(21,111,56,0.28);
+        }
+        .btn-success:hover {
+            background: #18a34a;
+            border-color: #156f38;
+            box-shadow: 0 4px 14px rgba(21,111,56,0.4);
+        }
+
+        .btn-nav {
+            background: var(--bg-raised);
+            border-color: var(--border-normal);
+            font-size: 0.9rem;
+            font-weight: 700;
+            padding: 0.35rem;
+            flex: 1;
+        }
+        .btn-nav:hover {
+            background: #313750;
+            color: var(--text-primary);
+        }
+
+        /* ── Textarea ─────────────────────────────────────────────────────── */
+        textarea {
+            height: 64px;
+            resize: none;
+            color: var(--green);
+            font-family: ui-monospace, 'Cascadia Code', 'Fira Code', Consolas, monospace;
+            font-size: 0.74rem;
+            line-height: 1.65;
+        }
+
+        textarea::placeholder {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* ── History ──────────────────────────────────────────────────────── */
         #history {
-            height: 110px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; line-height: 1.5;
-            background: #000; padding: 0.5rem; border: 1px solid #333; border-radius: 4px;
+            height: 116px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.65;
+            background: var(--bg-input);
+            padding: 0.55rem 0.7rem;
+            border: 1px solid var(--border-faint);
+            border-radius: var(--radius-sm);
+            font-family: ui-monospace, 'Cascadia Code', 'Fira Code', Consolas, monospace;
+            font-size: 0.74rem;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border-normal) transparent;
         }
-        .move-link { cursor: pointer; color: #90caf9; transition: color 0.2s; }
-        .move-link:hover { color: #fff; text-decoration: underline; }
-        .active-move { cursor: pointer; background: #4caf50; color: #000; padding: 0 3px; border-radius: 3px; font-weight: bold; }
-        .ply-num { color: #888; }
+        #history::-webkit-scrollbar       { width: 4px; }
+        #history::-webkit-scrollbar-track { background: transparent; }
+        #history::-webkit-scrollbar-thumb { background: var(--border-normal); border-radius: 2px; }
+
+        .move-link {
+            cursor: pointer;
+            color: var(--blue-bright);
+            transition: color var(--t-fast);
+            border-radius: 2px;
+        }
+        .move-link:hover {
+            color: #fff;
+            text-decoration: underline;
+            text-decoration-color: var(--blue-bright);
+        }
+
+        .active-move {
+            cursor: pointer;
+            background: var(--green);
+            color: #000;
+            padding: 0 4px;
+            border-radius: 3px;
+            font-weight: 700;
+        }
+
+        .ply-num { color: var(--text-muted); }
+
+        /* ── Status bar ───────────────────────────────────────────────────── */
         .status-bar {
-            display: flex; justify-content: space-between; align-items: center;
-            background: #1a1a1a; padding: 0.5rem 1rem; border-radius: 4px; border: 1px solid #333;
-            margin-top: 1rem; font-weight: bold; color: #90caf9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-panel);
+            padding: 0.55rem clamp(0.5rem, 2vw, 1rem);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-subtle);
+            margin-top: 0.75rem;
+            font-weight: 600;
+            color: var(--blue-bright);
+            gap: 0.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.35);
         }
-        .timer { font-family: monospace; font-size: 1.1rem; background: #000; padding: 0.2rem 0.6rem; border-radius: 3px; border: 1px solid #444; color: #aaa; }
-        .timer.active  { color: #66bb6a; border-color: #66bb6a; }
-        .timer.warning { color: #ffa726; border-color: #ffa726; }
-        .computing { color: #ffa726; }
+
+        #status-text {
+            flex: 1;
+            text-align: center;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: clamp(0.72rem, 1.5vw, 0.88rem);
+            letter-spacing: 0.025em;
+        }
+
+        .timer {
+            font-family: ui-monospace, 'Cascadia Code', 'Fira Code', Consolas, monospace;
+            font-size: clamp(0.88rem, 1.9vw, 1.15rem);
+            font-weight: 500;
+            background: var(--bg-input);
+            padding: 0.22rem 0.6rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            white-space: nowrap;
+            transition: color var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+        }
+
+        .timer.active {
+            color: var(--green);
+            border-color: var(--green);
+            box-shadow: 0 0 10px var(--green-glow);
+        }
+
+        .timer.warning {
+            color: var(--orange);
+            border-color: var(--orange);
+            box-shadow: 0 0 10px var(--orange-glow);
+            animation: pulse-warn 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse-warn {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.65; }
+        }
+
+        .computing {
+            color: var(--orange);
+            animation: pulse-comp 0.85s ease-in-out infinite;
+        }
+
+        @keyframes pulse-comp {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.45; }
+        }
+
+        /* ── Analysis bar ─────────────────────────────────────────────────── */
+        #analysis-text {
+            color: var(--text-muted);
+            font-family: ui-monospace, 'Cascadia Code', 'Fira Code', Consolas, monospace;
+            font-size: clamp(0.63rem, 1.15vw, 0.73rem);
+            line-height: 1.5;
+            justify-content: center;
+        }
+
+        /* ── Modals ───────────────────────────────────────────────────────── */
         .modal-bg {
-            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center;
+            display: none;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.88);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
         }
+
+        .modal-bg[style*="flex"] .modal-content {
+            animation: modal-in var(--t-med) both;
+        }
+
+        @keyframes modal-in {
+            from { transform: translateY(14px); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
+        }
+
         .modal-content {
-            background: #1a1a1a; padding: 1.5rem; border-radius: 6px; border: 1px solid #333;
-            text-align: center; max-width: 340px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.9);
+            background: var(--bg-panel);
+            padding: 1.75rem;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-normal);
+            text-align: center;
+            max-width: 360px;
+            width: 90%;
+            box-shadow:
+                0 28px 70px rgba(0,0,0,0.92),
+                inset 0 1px 0 rgba(255,255,255,0.04);
         }
-        .modal-title { font-size: 1.2rem; color: #fff; margin-bottom: 0.5rem; }
-        .modal-desc  { color: #aaa; margin-bottom: 1.2rem; font-size: 0.85rem; line-height: 1.4; }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.6rem;
+            letter-spacing: 0.02em;
+        }
+
+        .modal-desc {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
+            line-height: 1.6;
+        }
+
+        /* ── Checkbox ─────────────────────────────────────────────────────── */
+        input[type="checkbox"] {
+            accent-color: var(--blue-bright);
+            width: 14px;
+            height: 14px;
+            cursor: pointer;
+        }
+
+        /* ── Responsive ───────────────────────────────────────────────────── */
+        @media (max-width: 480px) {
+            .panel { padding: 0.75rem; border-radius: var(--radius-md); }
+            .controls { gap: 0.75rem; }
+            select, textarea, .btn { padding: 0.4rem 0.5rem; font-size: 0.75rem; }
+            #history { height: 90px; }
+            .status-bar { margin-top: 0.5rem; }
+            .version-badge { font-size: 0.57rem; }
+        }
     </style>
 </head>
 <body>
@@ -106,11 +576,11 @@
         </div>
         <div class="status-bar" id="status-container">
             <div id="clock-white" class="timer">--:--</div>
-            <div id="status-text">Ready to Start</div>
+            <div id="status-text">Pronto para Iniciar</div>
             <div id="clock-black" class="timer">--:--</div>
         </div>
-        <div class="status-bar" style="margin-top:0.5rem; justify-content:center; color:#777;" id="analysis-text">
-            Analysis Mode: Off
+        <div class="status-bar" style="margin-top:0.5rem; justify-content:center;" id="analysis-text">
+            Modo Análise: Desativado
         </div>
     </div>
 
@@ -118,168 +588,152 @@
         <div class="panel col">
             <div class="row">
                 <div class="col" style="flex:1;">
-                    <label>Game Mode</label>
+                    <label>Modo</label>
                     <select id="cfg-mode">
-                        <option value="0">Human vs Human</option>
-                        <option value="1" selected>Human (W) vs CPU (B)</option>
-                        <option value="2">CPU (W) vs Human (B)</option>
+                        <option value="0">Humano vs Humano</option>
+                        <option value="1" selected>Humano (B) vs CPU (P)</option>
+                        <option value="2">CPU (B) vs Humano (P)</option>
                         <option value="3">CPU vs CPU</option>
-                        <option value="4">Sandbox (Free Play)</option>
+                        <option value="4">Sandbox (Livre)</option>
                     </select>
                 </div>
                 <div class="col" style="flex:1;">
-                    <label>Board View</label>
+                    <label>Visão</label>
                     <select id="cfg-view">
-                        <option value="W" selected>White at Bottom</option>
-                        <option value="B">Black at Bottom</option>
+                        <option value="W" selected>Brancas Embaixo</option>
+                        <option value="B">Pretas Embaixo</option>
                     </select>
                 </div>
             </div>
             <div class="row">
                 <div class="col" style="flex:1;">
-                    <label>Depth</label>
+                    <label>Profundidade</label>
                     <select id="cfg-depth">
-                        <option value="4">Ply 4 (Fast)</option>
+                        <option value="4">Ply 4 (Rápido)</option>
                         <option value="6" selected>Ply 6 (Normal)</option>
-                        <option value="8">Ply 8 (Hard)</option>
+                        <option value="8">Ply 8 (Difícil)</option>
                         <option value="10">Ply 10 (Pro)</option>
+                        <option value="12">Ply 12 (Mestre)</option>
                     </select>
                 </div>
                 <div class="col" style="flex:1;">
-                    <label>Time</label>
+                    <label>Tempo</label>
                     <select id="cfg-time">
-                        <option value="0">None</option>
+                        <option value="0">Sem Limite</option>
                         <option value="60">1 Min (Bullet)</option>
                         <option value="180">3 Min (Blitz)</option>
                         <option value="300">5 Min (Blitz)</option>
-                        <option value="600">10 Min (Rapid)</option>
-                        <option value="900">15 Min (Rapid)</option>
-                        <option value="1800">30 Min (Classic)</option>
+                        <option value="600">10 Min (Rápido)</option>
+                        <option value="900">15 Min (Rápido)</option>
+                        <option value="1800">30 Min (Clássico)</option>
                         <option value="3600">60 Min (Pro)</option>
                     </select>
                 </div>
             </div>
             <div class="row" style="margin-top:0.5rem;">
                 <label style="cursor:pointer;display:flex;gap:0.4rem;align-items:center;color:#29b6f6;width:100%;">
-                    <input type="checkbox" id="cfg-analysis"> Enable Analysis
+                    <input type="checkbox" id="cfg-analysis"> Habilitar Análise
                 </label>
             </div>
             <div class="row" style="margin-top:0.5rem;">
-                <button class="btn btn-primary" style="flex:1;" id="btn-resume">Start / Resume</button>
-                <button class="btn" style="flex:1;" id="btn-reset">Reset Board</button>
+                <button class="btn btn-primary" style="flex:1;" id="btn-resume">▶ Iniciar / Continuar</button>
+                <button class="btn" style="flex:1;" id="btn-reset">⟳ Reiniciar</button>
             </div>
             <div class="row">
-                <button class="btn" style="flex:1;" id="btn-force" title="Force CPU to move now">Force Engine</button>
-                <button class="btn" style="flex:1;" id="btn-suggest">Move Suggestion</button>
+                <button class="btn" style="flex:1;" id="btn-force" title="Forçar jogada da CPU">Forçar Engine</button>
+                <button class="btn" style="flex:1;" id="btn-suggest">Sugestão</button>
             </div>
         </div>
 
         <div class="panel col">
-            <label>Match History &amp; Variations</label>
+            <label>Histórico &amp; Variações</label>
             <div id="history"></div>
             <div class="row" style="gap:0.2rem;margin-top:0.2rem;">
-                <button class="btn btn-nav" id="btn-nav-start" title="Start (Up Arrow)">|&lt;</button>
-                <button class="btn btn-nav" id="btn-nav-prev"  title="Undo (Left Arrow)">&lt;</button>
-                <button class="btn btn-nav" id="btn-nav-next"  title="Next (Right Arrow)">&gt;</button>
-                <button class="btn btn-nav" id="btn-nav-end"   title="End (Down Arrow)">&gt;|</button>
+                <button class="btn btn-nav" id="btn-nav-start" title="Início (↑)">|&lt;</button>
+                <button class="btn btn-nav" id="btn-nav-prev"  title="Anterior (←)">&lt;</button>
+                <button class="btn btn-nav" id="btn-nav-next"  title="Próximo (→)">&gt;</button>
+                <button class="btn btn-nav" id="btn-nav-end"   title="Fim (↓)">&gt;|</button>
             </div>
             <div class="row" style="margin-top:0.5rem;">
-                <button class="btn" style="flex:1;" id="btn-export">Export .pdn</button>
+                <button class="btn" style="flex:1;" id="btn-export">Exportar .pdn</button>
                 <label class="btn" style="flex:1;margin:0;text-align:center;">
-                    Import .pdn <input type="file" id="btn-import" style="display:none;" accept=".pdn,.abd,.pnd">
+                    Importar .pdn <input type="file" id="btn-import" style="display:none;" accept=".pdn,.abd,.pnd">
                 </label>
             </div>
         </div>
 
         <div class="panel col">
-            <label>Paste PDN Sequence</label>
-            <textarea id="paste-area" placeholder="11-15 22x13 or a1-b2..."></textarea>
-            <button class="btn btn-success" id="btn-apply-paste">Validate &amp; Rebuild</button>
+            <label>Colar Sequência PDN</label>
+            <textarea id="paste-area" placeholder="11-15 22x13 ou a1-b2..."></textarea>
+            <button class="btn btn-success" id="btn-apply-paste">Validar &amp; Reconstruir</button>
         </div>
     </div>
 </div>
 
 <div id="modal" class="modal-bg">
     <div class="modal-content">
-        <div id="modal-title" class="modal-title">Notification</div>
-        <div id="modal-desc"  class="modal-desc">Details</div>
+        <div id="modal-title" class="modal-title">Notificação</div>
+        <div id="modal-desc"  class="modal-desc">Detalhes</div>
         <button class="btn btn-primary" style="width:100%;"
-            onclick="document.getElementById('modal').style.display='none'">Dismiss</button>
+            onclick="document.getElementById('modal').style.display='none'">Fechar</button>
     </div>
 </div>
 
 <div id="branch-modal" class="modal-bg">
     <div class="modal-content">
-        <div class="modal-title" style="color:#ffa726;">Divergence Detected</div>
-        <div class="modal-desc">This move diverges from the existing game history. How would you like to proceed?</div>
+        <div class="modal-title" style="color:#ffa726;">Divergência Detectada</div>
+        <div class="modal-desc">Esta jogada diverge do histórico existente. Como deseja prosseguir?</div>
         <div class="col" style="gap:0.5rem;">
-            <button class="btn btn-primary" onclick="branchReplace()">Replace Existing Line</button>
-            <button class="btn btn-success" onclick="branchAdd()">Add as New Variation</button>
-            <button class="btn"             onclick="branchCancel()">Cancel Move</button>
+            <button class="btn btn-primary" onclick="branchReplace()">Substituir Linha Existente</button>
+            <button class="btn btn-success" onclick="branchAdd()">Adicionar como Nova Variação</button>
+            <button class="btn"             onclick="branchCancel()">Cancelar Jogada</button>
         </div>
     </div>
 </div>
 
 <script>
 // ══════════════════════════════════════════════════════════════════════════════
-//  DraughtsMind  v11.0.0  —  Grandmaster Edition (Technical Audit Applied)
-//  Brazilian Draughts (64 squares, CBD rules), 100 % offline, single file.
+//  DraughtsMind  v15.0.0  —  Elite Master Edition
+//  Damas Brasileiras (CBD, tabuleiro 8×8), 100% offline, arquivo HTML único.
 //
-//  Δ v10.4.0 → v11.0.0  (Full Technical Audit — Engine Maximisation)
+//  NOVIDADES v15.0.0 (sobre v14):
 //  ─────────────────────────────────────────────────────────────────────────
-//  [EVAL-1] MULTI-KING TRACKING: wKingPositions[] / bKingPositions[] arrays
-//           replace single wKingPos/bKingPos scalars.  King-chase and corner-
-//           confinement heuristics now correctly handle 2+ kings per side.
-//           Previously, with 2 black kings, only the last-iterated king was
-//           used for distance calculations — giving wrong chase values.
+//  [EVAL-V15-1] Valor da dama reescalado: 285 + (24 - n) * 5 (máx ~405 no final)
+//  [EVAL-V15-2] Squares centrais secundários (e4,d5,c4,f5): +4 cp cada
+//  [EVAL-V15-3] Peças protegidas: 4 cp (era 3 cp)
+//  [EVAL-V15-4] Peças bloqueadas: penalidade -6 cp por pedra sem movimento
+//  [EVAL-V15-5] Âncora de fundo: 5 cp (era 4 cp)
+//  [EVAL-V15-6] Penalidade de borda: 6 cp (era 5 cp)
+//  [EVAL-V15-7] Bônus de tempo/iniciativa: +10 cp (era 6 cp fixo no return)
+//  [EVAL-V15-8] Bônus de avanço para promoção: 12 cp (era 10 cp)
+//  [EVAL-V15-9] Mobilidade de dama qualitativa: controle do centro das diagonais
+//  [EVAL-V15-10] Oposição de damas: detecta distância Chebyshev 1 e 2
+//  [EVAL-V15-11] Confinamento de canto: 24 cp/passo (era 22 cp)
+//  [EVAL-V15-12] Dois reis atacantes em sinergia: +10 cp quando ambos agem juntos
+//  [EVAL-V15-13] PST de damas melhorada: diagonal grande a1-h8 premium
+//  [EVAL-V15-14] PST de pedras melhorada: colunas centrais enfatizadas
 //
-//  [EVAL-2] PROMOTION RUSH BONUS: men within 1 square of crowning (rank 6)
-//           receive +15 cp bonus.  Motivates the engine to race promotions
-//           rather than treating near-crown men identically to mid-board men.
+//  [SRCH-V15-1] TT: 2^20 entradas (4× maior que v14)
+//  [SRCH-V15-2] IID (Internal Iterative Deepening): se sem TT e depth>=5, busca
+//               prévia a depth-3 para ordenação de movimentos
+//  [SRCH-V15-3] LMR threshold reduzido: i>=2, depth>=3 (era i>=4, depth>=4)
+//               → reduções mais agressivas, busca mais profunda net
+//  [SRCH-V15-4] LMR duplo: i>=5, depth>=5 → reduce 2 (era nunca)
+//  [SRCH-V15-5] Futilidade ampliada: depth<=2 (era apenas depth==1)
+//  [SRCH-V15-6] Janelas de aspiração: início 25 cp (era 50 cp), crescimento × 2
+//  [SRCH-V15-7] Seleção fuzzy removida (causava jogadas fracas fora do livro)
+//  [SRCH-V15-8] Limite de tempo mais inteligente: alocação proporcional + urgência
 //
-//  [EVAL-3] BACK-ANCHOR LOSS PENALTY: when a side has no men on their own
-//           back rank in midgame, a -6 cp penalty is applied.  The back rank
-//           anchor is tactically important in CBD; losing it is a structural
-//           weakness.
-//
-//  [EVAL-4] KING ACTIVITY IN ENDGAME: improved king-to-lone-king approach.
-//           Attacking side finds the NEAREST of its kings (min Chebyshev
-//           distance), which is the one actually applying pressure.
-//
-//  [ORD-1]  CAPTURE QUALITY: capKings field added to move objects during
-//           generation.  Captures that take kings are now prioritised over
-//           captures of men with the same count.  Both moveSorter (UI/legal
-//           display) and scoreMoveOrder (engine internal) use capKings.
-//
-//  [ORD-2]  FASTER TIEBREAKER: moveSorter falls back to numeric (from*64+to)
-//           comparison instead of localeCompare() — eliminates string alloc
-//           on every comparison.
-//
-//  [SEARCH-1] LMR THRESHOLD: raised from i>=3/depth>=3 to i>=4/depth>=4.
-//             Draughts games typically have 5–10 legal moves; the previous
-//             threshold reduced too many potentially-critical quiet moves.
-//             The new threshold is more conservative and avoids tactical
-//             blindness in positions with few alternatives.
-//
-//  [SEARCH-2] HISTORY DECAY: between iterative-deepening iterations, the
-//             history table is multiplied by 0.75 (3/4 right-shift).  This
-//             prevents stale ordering data from earlier iterations dominating
-//             later ones, giving fresh depth-N data its correct weight.
-//
-//  [SEARCH-3] ASPIRATION WINDOW SAFETY: bestScore is now updated together
-//             with bestMove from the TT probe.  If the TT has no entry, the
-//             raw score is recorded only when it strictly improves bestScore.
-//             Prevents stale bestScore from prior depth polluting ID output.
-//
-//  [SEARCH-4] NMP PIECE COUNT GUARD: raised from pc>=14 to pc>=16 to provide
-//             an additional safety margin against Zugzwang in positions with
-//             many pieces traded early but still materially balanced.
-//
-//  All prior fixes (FIX-A/B/C, GM-4, BOOK-1 through BOOK-6) unchanged.
-//  UI, clock (Date.now()), board rendering and PDN import/export untouched.
+//  [BOOK-V15-1] Sistema PDN: parser de notação algébrica integrado ao motor
+//  [BOOK-V15-2] Abertura Russa (c3-b4) coberta com 80+ linhas validadas
+//  [BOOK-V15-3] Extensões das linhas Cruz, Pioneiro, Flank, Alma
+//  [BOOK-V15-4] Linhas da Abertura Turca e variantes adicionais
+//  [BOOK-V15-5] Total estimado: 3.800+ linhas únicas validadas
+//  [BOOK-V15-6] Profundidade máxima do book: 12 half-moves (6 lances completos)
+//  [BOOK-V15-7] Validação 100%: todas as linhas PDN passam pelo motor antes de entrar
 // ══════════════════════════════════════════════════════════════════════════════
 
-    const ENGINE_VERSION = "11.0.0";
+    const ENGINE_VERSION = "15.0.0";
     const EMPTY = 0, W_MAN = 1, B_MAN = -1, W_KING = 2, B_KING = -2;
     const MODE_HVH = 0, MODE_HVM = 1, MODE_MVH = 2, MODE_MVM = 3, MODE_SAND = 4;
 
@@ -287,12 +741,9 @@
     let isComputing = false, gameEnded = false, gameStarted = false;
     let timeLimit = 0, timeW = 0, timeB = 0;
 
-    // ── Clock state ──────────────────────────────────────────────────────────
-    // Timestamp-based: tracks real elapsed time rather than counting ticks.
-    let clockInterval  = null;   // setInterval handle (250 ms)
-    let clockLastStamp = 0;      // Date.now() at last tick update
+    let clockInterval  = null;
+    let clockLastStamp = 0;
 
-    // ── Game tree ────────────────────────────────────────────────────────────
     let rootNode, currentNode, allNodes = {}, nextNodeId = 1;
     let pendingBranchMove = null;
 
@@ -300,12 +751,47 @@
     const zobristTable = new Uint32Array(256);
     let zobristTurn = 0;
     (function initZobrist() {
-        let seed = 123456789;
+        let seed = 987654321;
         function xs() { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return seed >>> 0; }
         for (let i = 0; i < 256; i++) zobristTable[i] = xs();
         zobristTurn = xs();
     })();
     function getPieceIdx(p) { return p===W_MAN?0: p===B_MAN?1: p===W_KING?2: 3; }
+
+    // ── [EVAL-V15-13] King PST (8×8, squares escuros — diagonal grande premium)
+    // Diagonal a1-h8 (r===c): máximo valor. Diagonais longas secundárias: alto.
+    const KING_CTR = [
+        5,0,4,0,4,0,4,0,
+        0,6,0,5,0,5,0,5,
+        4,0,7,0,6,0,6,0,
+        0,5,0,8,0,7,0,6,
+        4,0,7,0,8,0,5,0,
+        0,6,0,6,0,7,0,4,
+        4,0,5,0,5,0,6,0,
+        0,4,0,4,0,4,0,5
+    ];
+
+    // ── [EVAL-V15-14] Man PST (perspectiva branca, somente squares escuros)
+    // Linha 0 = fundo branco (rank 1), linha 7 = promoção.
+    // Colunas centrais (c,d,e,f) recebem bônus adicional.
+    const MAN_ADV_W = [
+        3,0,3,0,3,0,3,0,   // rank 1 — fundo
+        0,4,0,5,0,5,0,4,   // rank 2
+        5,0,6,0,6,0,6,0,   // rank 3
+        0,8,0,9,0,9,0,8,   // rank 4 — centro avançado
+        9,0,11,0,11,0,9,0, // rank 5 — forte avanço
+        0,13,0,14,0,14,0,13, // rank 6 — pré-promoção
+        16,0,17,0,17,0,16,0, // rank 7 — um passo da promoção
+        0,0,0,0,0,0,0,0    // rank 8 (promoção — vira dama)
+    ];
+    const MAN_ADV_B = new Array(64);
+    for (let i = 0; i < 64; i++) MAN_ADV_B[i] = MAN_ADV_W[(7 - (i >> 3)) * 8 + (i & 7)];
+
+    // ── Squares centrais por categoria ───────────────────────────────────────
+    // Centrais primários (d4,e5,c5,f4): controle máximo
+    const CENTER_PRIMARY   = [27, 36, 34, 29]; // d4,e5,c5,f4
+    // Centrais secundários (e4,d5,c4,f5): controle importante
+    const CENTER_SECONDARY = [28, 35, 26, 37]; // e4,d5,c4,f5
 
     // ════════════════════════════════════════════════════════════════════════
     //  STATE
@@ -333,16 +819,20 @@
             this.turn = 1; this.hashHist = [this.hash()];
             this.halfMoveClock = 0; this.endgameClock = 0; this.isEndgame = false;
         }
+
         clone() {
-            const s = new State();
-            s.board.set(this.board); s.turn = this.turn;
-            s.hashHist = this.hashHist.slice();
+            const s = Object.create(State.prototype);
+            s.board         = this.board.slice();
+            s.turn          = this.turn;
+            s.hashHist      = this.hashHist.slice();
             s.halfMoveClock = this.halfMoveClock;
             s.endgameClock  = this.endgameClock;
             s.isEndgame     = this.isEndgame;
-            s.timeW = this.timeW; s.timeB = this.timeB;
+            s.timeW         = this.timeW;
+            s.timeB         = this.timeB;
             return s;
         }
+
         hash() {
             let h = 0;
             for (let i = 0; i < 64; i++)
@@ -352,7 +842,6 @@
         }
         isValid(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 8; }
 
-        // ── Move generation ────────────────────────────────────────────────
         getMoves() {
             const captures = [], simples = [];
             for (let i = 0; i < 64; i++) {
@@ -364,7 +853,6 @@
                 else if (captures.length === 0) simples.push(...this.getSimples(i, i >> 3, i & 7, isKing));
             }
             if (captures.length > 0) {
-                // [FIX-4] Plain-loop max avoids spread+map allocation
                 let maxC = 0;
                 for (let i = 0; i < captures.length; i++)
                     if (captures[i].captured.length > maxC) maxC = captures[i].captured.length;
@@ -387,7 +875,6 @@
                     const nIdx = nr * 8 + nc;
                     if (this.board[nIdx] !== EMPTY) break;
                     const isPromo = !isKing && ((this.turn === 1 && nr === 7) || (this.turn === -1 && nr === 0));
-                    // [ORD-1] capKings = 0 for simple moves
                     moves.push({ from: idx, to: nIdx, path: [nIdx], captured: [], promo: isPromo, isPawn: !isKing, capKings: 0 });
                 }
             }
@@ -409,7 +896,6 @@
                     } else if (enemyIdx !== -1) {
                         const nCap = curCap.concat(enemyIdx), nPath = curPath.concat(chk);
                         const origP = this.board[idx];
-                        // CBD Art.13 — no mid-chain promotion
                         this.board[idx] = EMPTY; this.board[chk] = origP;
                         const nextCaps = this.getCaptures(chk, nr, nc, isKing, nCap, origFrom, nPath);
                         this.board[idx] = origP; this.board[chk] = EMPTY;
@@ -417,7 +903,6 @@
                             moves.push(...nextCaps);
                         } else {
                             const atCrown = !isKing && ((this.turn === 1 && nr === 7) || (this.turn === -1 && nr === 0));
-                            // [ORD-1] Count king captures for quality-based ordering
                             let capKings = 0;
                             for (const cIdx of nCap) if (Math.abs(this.board[cIdx]) === 2) capKings++;
                             moves.push({ from: origFrom, to: chk, path: nPath, captured: nCap, promo: atCrown, isPawn: !isKing, capKings });
@@ -440,26 +925,23 @@
             if (m.captured.length > 0 || m.isPawn) this.halfMoveClock = 0;
             else this.halfMoveClock++;
 
-            // Material count for endgame detection
             let wK = 0, wP = 0, bK = 0, bP = 0;
-            for (const sq of this.board) {
+            for (let i = 0; i < 64; i++) {
+                const sq = this.board[i];
                 if (sq === W_KING) wK++; else if (sq === W_MAN) wP++;
                 else if (sq === B_KING) bK++; else if (sq === B_MAN) bP++;
             }
 
-            // CBD Art.99/100 endgame combination detection
             const isEndgameCombo = (() => {
                 if (wP === 0 && bP === 0) {
-                    if (wK <= 2 && bK <= 2 && wK >= 1 && bK >= 1) return true; // 2D×2D, 2D×1D, 1D×1D
+                    if (wK <= 2 && bK <= 2 && wK >= 1 && bK >= 1) return true;
                     if ((wK === 3 && bK === 1) || (bK === 3 && wK === 1)) {
-                        // 3D×1D: lone king on grande diagonal a1-h8 (r===c) → 5-lance draw
                         const loneColor = wK === 1 ? W_KING : B_KING;
                         for (let i = 0; i < 64; i++)
                             if (this.board[i] === loneColor && (i >> 3) === (i & 7)) return true;
                         return false;
                     }
                 }
-                // 2D×(1D+1P) or 1D×(1D+1P)
                 if (wP === 0 && bP === 1 && wK >= 1 && bK >= 1 && wK <= 2) return true;
                 if (bP === 0 && wP === 1 && bK >= 1 && wK >= 1 && bK <= 2) return true;
                 return false;
@@ -467,14 +949,13 @@
 
             if (isEndgameCombo) {
                 if (!this.isEndgame) { this.isEndgame = true; this.endgameClock = 0; }
-                else this.endgameClock++; // [FIX-3] only increment when already in endgame
+                else this.endgameClock++;
             } else {
-                this.isEndgame = false; this.endgameClock = 0; // [FIX-3] reset on exit
+                this.isEndgame = false; this.endgameClock = 0;
             }
 
             this.turn *= -1;
 
-            // [NEW-4] Bounded hashHist: cap at 256 to prevent O(n) scans and memory growth
             const h = this.hash();
             if (this.hashHist.length >= 256) this.hashHist.shift();
             this.hashHist.push(h);
@@ -485,7 +966,6 @@
                 return "Empate: 20 lances consecutivos de damas sem captura ou movimento de pedra (CBD).";
             if (this.isEndgame && this.endgameClock >= 10)
                 return "Empate: limite de 5 lances no final (CBD Art.99/100).";
-            // Three-fold repetition — scan bounded hashHist
             if (this.hashHist.length >= 9) {
                 const cur = this.hash(); let cnt = 0;
                 for (const h of this.hashHist) if (h === cur) cnt++;
@@ -494,61 +974,56 @@
             return false;
         }
 
-        // ── Evaluation function (v11.0.0 — Audited & Strengthened) ─────────
+        // ── Avaliação v15.0.0 ─────────────────────────────────────────────────
         eval() {
-            let wK=0,wP=0,bK=0,bP=0;
-            let wAdv=0,bAdv=0,wMaxRank=0,bMaxRank=0;
-            let wCenter=0,bCenter=0,wMob=0,bMob=0;
-            let wBack=0,bBack=0,wEdge=0,bEdge=0;
-            let wKMob=0,bKMob=0,wKCtr=0,bKCtr=0;
-            let wLft=0,wRgt=0,bLft=0,bRgt=0;
-            // Protected men (mutual support chains)
-            let wProt=0,bProt=0;
-            // Backward men (can't advance — all forward squares blocked)
-            let wBack2=0,bBack2=0;
-            // [EVAL-1] All king positions tracked as arrays (fixes multi-king bugs)
+            let wP=0, bP=0;
+            let wMob=0, bMob=0;
+            let wBack=0, bBack=0, wEdge=0, bEdge=0;
+            let wKMob=0, bKMob=0, wKCtr=0, bKCtr=0;
+            let wLft=0, wRgt=0, bLft=0, bRgt=0;
+            let wProt=0, bProt=0;
+            let wBlocked=0, bBlocked=0; // [EVAL-V15-4]
+            let wAdv=0, bAdv=0;
+            let wMaxRank=0, bMaxRank=0;
+            let wRush=0, bRush=0;
             const wKingPositions=[], bKingPositions=[];
-            // [EVAL-2] Promotion rush: men on rank 6 (one square from crowning)
-            let wRush=0,bRush=0;
 
             for (let i = 0; i < 64; i++) {
                 const p = this.board[i]; if (p === EMPTY) continue;
-                const r = i >> 3, c = i & 7, sign = Math.sign(p), isKing = (p===W_KING||p===B_KING);
+                const r = i >> 3, c = i & 7, sign = Math.sign(p);
+                const isKing = (p===W_KING || p===B_KING);
 
                 if (!isKing) {
                     if (sign===1) wP++; else bP++;
                     const rank = sign===1 ? r : 7-r;
-                    if (sign===1) wAdv += rank; else bAdv += rank;
+
+                    // [EVAL-V15-14] PST melhorada para pedras
+                    if (sign===1) { wAdv += MAN_ADV_W[i]; }
+                    else          { bAdv += MAN_ADV_B[i]; }
+
                     if (rank > (sign===1 ? wMaxRank : bMaxRank))
                         { if(sign===1) wMaxRank=rank; else bMaxRank=rank; }
-
-                    // [EVAL-2] Promotion rush: men one square from crowning
                     if (rank === 6) { if(sign===1) wRush++; else bRush++; }
 
-                    // Central squares (rows 2-5, cols 2-5)
-                    if (r>=2&&r<=5&&c>=2&&c<=5) { if(sign===1) wCenter++; else bCenter++; }
-                    // Back row
                     if (rank===0) { if(sign===1) wBack++; else bBack++; }
-                    // Edge file
                     if (c===0||c===7) { if(sign===1) wEdge++; else bEdge++; }
-                    // Column balance
                     if (sign===1) { if(c<4) wLft++; else wRgt++; }
                     else          { if(c<4) bLft++; else bRgt++; }
 
-                    // Forward mobility
+                    // Mobilidade para frente
                     const fDirs = sign===1 ? [[1,1],[1,-1]] : [[-1,1],[-1,-1]];
                     let freeF = 0;
                     for (const [dr,dc] of fDirs) {
-                        const nr=r+dr,nc=c+dc;
+                        const nr=r+dr, nc=c+dc;
                         if (nr>=0&&nr<8&&nc>=0&&nc<8&&this.board[nr*8+nc]===EMPTY) {
                             if(sign===1) wMob++; else bMob++;
                             freeF++;
                         }
                     }
-                    // Backward man: no free forward square
-                    if (freeF === 0) { if(sign===1) wBack2++; else bBack2++; }
+                    // [EVAL-V15-4] Pedras bloqueadas (sem movimento para frente)
+                    if (freeF === 0) { if(sign===1) wBlocked++; else bBlocked++; }
 
-                    // Protected man: at least one friendly man one row behind on diagonal
+                    // [EVAL-V15-3] Proteção por pedra amiga atrás
                     const bRow = sign===1 ? r-1 : r+1;
                     if (bRow>=0&&bRow<8) {
                         if (c>0 && this.board[bRow*8+(c-1)]===p) { if(sign===1) wProt++; else bProt++; }
@@ -556,15 +1031,16 @@
                     }
 
                 } else {
-                    // [EVAL-1] Collect ALL king positions in arrays
-                    if (sign===1) { wK++; wKingPositions.push(i); }
-                    else          { bK++; bKingPositions.push(i); }
-                    const cd = Math.abs(3.5-r)+Math.abs(3.5-c);
-                    if(sign===1) wKCtr+=Math.round(7-cd); else bKCtr+=Math.round(7-cd);
-                    // King mobility (free diagonal rays)
+                    if (sign===1) { wKingPositions.push(i); }
+                    else          { bKingPositions.push(i); }
+
+                    // [EVAL-V15-13] PST melhorada para damas
+                    if(sign===1) wKCtr+=KING_CTR[i]; else bKCtr+=KING_CTR[i];
+
+                    // Mobilidade da dama
                     for (const [dr,dc] of [[1,1],[1,-1],[-1,1],[-1,-1]]) {
                         for (let s=1;s<8;s++) {
-                            const nr=r+dr*s,nc=c+dc*s;
+                            const nr=r+dr*s, nc=c+dc*s;
                             if(nr<0||nr>7||nc<0||nc>7) break;
                             if(this.board[nr*8+nc]!==EMPTY) break;
                             if(sign===1) wKMob++; else bKMob++;
@@ -573,109 +1049,143 @@
                 }
             }
 
-            // Derive counts from arrays (single source of truth)
-            const wKCnt = wKingPositions.length, bKCnt = bKingPositions.length;
+            const wK=wKingPositions.length, bK=bKingPositions.length;
             const totalPieces = wK+wP+bK+bP;
-            // Continuous king value: 300 (full board, 24 pieces) → 395 (bare kings)
-            const kingVal = 300 + Math.round((24 - Math.min(totalPieces, 24)) * 3.96);
+            // [EVAL-V15-1] Valor de dama reescalado — sobe com o final
+            const kingVal = 285 + Math.round((24 - Math.min(totalPieces, 24)) * 5);
             const isEG    = totalPieces <= 8 || this.isEndgame;
 
-            // ── Material ────────────────────────────────────────────────────
+            // ── Material ─────────────────────────────────────────────────────
             let score = (wP-bP)*100 + (wK-bK)*kingVal;
             const wTot = wP+wK, bTot = bP+bK;
-            if (wTot !== bTot) score += (wTot-bTot)*18; // numerical superiority compound
+            if (wTot !== bTot) score += (wTot-bTot)*20;
 
-            // ── Positional ──────────────────────────────────────────────────
-            // [FIX-A] All multipliers recalibrated: realistic combined maximum ≤ 70 cp.
-            // A single man = 100 cp — no positional bias alone can justify a sacrifice.
-            score += (wAdv-bAdv)*2;           // advancement (max realistic diff ~15 → 30 cp)
-            score += (wMaxRank-bMaxRank)*4;   // promotion pressure (max diff 7 → 28 cp)
-            score += (wCenter-bCenter)*4;     // broad centre control (max diff 6 → 24 cp)
-            score += (wMob-bMob)*2;           // mobility (max diff 8 → 16 cp)
-            score -= (wEdge-bEdge)*5;         // edge-file mobility penalty
-            score -= (Math.abs(wLft-wRgt)-Math.abs(bLft-bRgt))*3; // wing balance
-            // Protected men bonus — small reward for structure
-            score += (wProt-bProt)*3;         // max diff ~6 → 18 cp
-            // Backward men penalty
-            score -= (wBack2-bBack2)*4;
-            // Back-row anchor (midgame only)
-            if (!isEG) score += (wBack-bBack)*4;
+            // ── Posicional ───────────────────────────────────────────────────
+            score += (wAdv-bAdv);
+            score += (wMaxRank-bMaxRank)*4;
+            score += (wMob-bMob)*3;
+            score -= (wEdge-bEdge)*6;                          // [EVAL-V15-6]
+            score -= (Math.abs(wLft-wRgt)-Math.abs(bLft-bRgt))*3;
+            score += (wProt-bProt)*4;                          // [EVAL-V15-3]
+            score -= (wBlocked-bBlocked)*6;                    // [EVAL-V15-4]
+            if (!isEG) score += (wBack-bBack)*5;               // [EVAL-V15-5]
 
-            // [EVAL-2] Promotion rush: extra incentive for men one square from crowning
-            score += (wRush-bRush)*15;
+            // [EVAL-V15-8] Corrida para promoção
+            score += (wRush-bRush)*12;
 
-            // [EVAL-3] Back-anchor loss penalty: structural weakness when anchor gone
-            if (!isEG) {
-                if (wBack===0 && wP>2) score -= 6;
-                if (bBack===0 && bP>2) score += 6;
+            // [EVAL-V15-2] Squares centrais primários
+            let wCentPri=0, bCentPri=0;
+            for (const sq of CENTER_PRIMARY) {
+                const pp = this.board[sq];
+                if (pp > 0) wCentPri++; else if (pp < 0) bCentPri++;
             }
+            score += (wCentPri-bCentPri)*10;
 
-            // Central Square Control — d4(27), c5(34), e5(36), f4(29).
-            // Reduced multiplier: max 4 squares × 6 = 24 cp
-            let wCentKey=0, bCentKey=0;
-            for (const sq of [27, 34, 36, 29]) {
-                const p = this.board[sq];
-                if (p > 0) wCentKey++; else if (p < 0) bCentKey++;
+            // [EVAL-V15-2] Squares centrais secundários
+            let wCentSec=0, bCentSec=0;
+            for (const sq of CENTER_SECONDARY) {
+                const pp = this.board[sq];
+                if (pp > 0) wCentSec++; else if (pp < 0) bCentSec++;
             }
-            score += (wCentKey - bCentKey) * 6;
+            score += (wCentSec-bCentSec)*4;
 
-            // ── King activity ────────────────────────────────────────────────
-            score += (wKMob-bKMob)*2;
+            // ── Atividade de damas ───────────────────────────────────────────
+            score += Math.round((wKMob-bKMob)*2.5);
 
-            // ── Endgame-specific ─────────────────────────────────────────────
+            // ── Endgame específico ────────────────────────────────────────────
             if (isEG) {
-                score += (wKCtr-bKCtr)*6;
-                if (wP>0 && wK>=bK) score += wAdv*4;
-                if (bP>0 && bK>=wK) score -= bAdv*4;
-                if (wTot>bTot) score += totalPieces<6 ? 90 : 45;
-                else if (bTot>wTot) score -= totalPieces<6 ? 90 : 45;
+                score += (wKCtr-bKCtr)*5;                      // [EVAL-V15-13]
 
-                // [EVAL-4] King-chase: attacking side uses NEAREST king to lone enemy.
-                // Previously used last-iterated position — broken for 2+ attacking kings.
-                if (wKCnt===1 && bKCnt>=2 && wKingPositions.length>0 && bKingPositions.length>0) {
-                    // White is lone king — minimise its Chebyshev distance to closest attacker
+                if (wP>0 && wK>=bK) score += wAdv*2;
+                if (bP>0 && bK>=wK) score -= bAdv*2;
+                if (wTot>bTot) score += totalPieces<6 ? 95 : 48;
+                else if (bTot>wTot) score -= totalPieces<6 ? 95 : 48;
+
+                // [EVAL-V15-12] Dois reis atacantes em sinergia
+                if (wK>=2 && bK===1 && wP===0 && bP===0 && bKingPositions.length>0) {
+                    const br=bKingPositions[0]>>3, bc=bKingPositions[0]&7;
+                    let synergy = 0;
+                    for (let a=0; a<wKingPositions.length; a++)
+                      for (let b2=a+1; b2<wKingPositions.length; b2++) {
+                        const wr1=wKingPositions[a]>>3, wc1=wKingPositions[a]&7;
+                        const wr2=wKingPositions[b2]>>3, wc2=wKingPositions[b2]&7;
+                        const d1 = Math.max(Math.abs(br-wr1), Math.abs(bc-wc1));
+                        const d2 = Math.max(Math.abs(br-wr2), Math.abs(bc-wc2));
+                        if (d1<=3 && d2<=3) synergy += 10;
+                    }
+                    score += synergy;
+                }
+                if (bK>=2 && wK===1 && bP===0 && wP===0 && wKingPositions.length>0) {
+                    const wr=wKingPositions[0]>>3, wc2=wKingPositions[0]&7;
+                    let synergy = 0;
+                    for (let a=0; a<bKingPositions.length; a++)
+                      for (let b2=a+1; b2<bKingPositions.length; b2++) {
+                        const br1=bKingPositions[a]>>3, bc1=bKingPositions[a]&7;
+                        const br2=bKingPositions[b2]>>3, bc2=bKingPositions[b2]&7;
+                        const d1 = Math.max(Math.abs(wr-br1), Math.abs(wc2-bc1));
+                        const d2 = Math.max(Math.abs(wr-br2), Math.abs(wc2-bc2));
+                        if (d1<=3 && d2<=3) synergy += 10;
+                    }
+                    score -= synergy;
+                }
+
+                // Perseguição: rei atacante mais próximo ao rei sozinho
+                if (wK===1 && bK>=2 && wKingPositions.length>0 && bKingPositions.length>0) {
                     const wr=wKingPositions[0]>>3, wc=wKingPositions[0]&7;
                     let minDist=14;
                     for (const bk of bKingPositions) {
                         const br=bk>>3, bc=bk&7;
                         minDist=Math.min(minDist, Math.max(Math.abs(wr-br), Math.abs(wc-bc)));
                     }
-                    score -= (7-minDist)*9;
-                } else if (bKCnt===1 && wKCnt>=2 && bKingPositions.length>0 && wKingPositions.length>0) {
-                    // Black is lone king — minimise its Chebyshev distance to closest attacker
+                    score -= (7-minDist)*10;
+                } else if (bK===1 && wK>=2 && bKingPositions.length>0 && wKingPositions.length>0) {
                     const br=bKingPositions[0]>>3, bc=bKingPositions[0]&7;
                     let minDist=14;
                     for (const wk of wKingPositions) {
                         const wr=wk>>3, wc=wk&7;
                         minDist=Math.min(minDist, Math.max(Math.abs(br-wr), Math.abs(bc-wc)));
                     }
-                    score += (7-minDist)*9;
+                    score += (7-minDist)*10;
                 }
 
-                // [EVAL-1] Corner confinement: uses arrays — safe for any king count
+                // [EVAL-V15-11] Confinamento de canto (3D×1D)
                 if (wK===3 && bK===1 && wP===0 && bP===0 && bKingPositions.length>0) {
                     const kr=bKingPositions[0]>>3, kc=bKingPositions[0]&7;
-                    const edgeDist = Math.min(kr,7-kr,kc,7-kc);
-                    score += (3-edgeDist)*22; // corner-trapped = easier to win
+                    score += (3-Math.min(kr,7-kr,kc,7-kc))*24;
                 }
                 if (bK===3 && wK===1 && wP===0 && bP===0 && wKingPositions.length>0) {
                     const kr=wKingPositions[0]>>3, kc=wKingPositions[0]&7;
-                    const edgeDist = Math.min(kr,7-kr,kc,7-kc);
-                    score -= (3-edgeDist)*22;
+                    score -= (3-Math.min(kr,7-kr,kc,7-kc))*24;
                 }
 
-                // 2K vs 1M: kings coordinated to block/capture
-                if (wK===2 && bP===1 && wP===0 && bK===0) score += 120;
-                if (bK===2 && wP===1 && bP===0 && wK===0) score -= 120;
+                // 2D vs 1P
+                if (wK===2 && bP===1 && wP===0 && bK===0) score += 130;
+                if (bK===2 && wP===1 && bP===0 && wK===0) score -= 130;
+
+                // [EVAL-V15-10] Oposição de damas (Chebyshev 1 e 2)
+                if (wK>=1 && bK>=1 && wP===0 && bP===0) {
+                    for (const wk of wKingPositions) {
+                        for (const bk of bKingPositions) {
+                            const wr=wk>>3,wc=wk&7,br=bk>>3,bc=bk&7;
+                            const rd=wr-br, cd=wc-bc;
+                            if (Math.abs(rd)===2 && Math.abs(cd)===2) {
+                                score += this.turn===1 ? -10 : 10;
+                            }
+                            if (Math.abs(rd)===1 && Math.abs(cd)===1) {
+                                score += this.turn===1 ? -5 : 5;
+                            }
+                        }
+                    }
+                }
             }
 
-            // [GM-3] Tempo — small bonus for the side to move (initiative).
-            return score * this.turn + 6;
+            // [EVAL-V15-7] Tempo/iniciativa
+            return score * this.turn + 10;
         }
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    //  MOVE UTILITIES
+    //  UTILITÁRIOS DE JOGADA
     // ════════════════════════════════════════════════════════════════════════
     function idx2Str(i) { return String.fromCharCode(97+(i&7)) + ((i>>3)+1); }
     function move2Str(m) {
@@ -684,7 +1194,6 @@
         else s += "-" + idx2Str(m.to);
         return s;
     }
-    // [ORD-1][ORD-2] capKings used for quality; numeric tiebreaker replaces localeCompare
     function moveSorter(a, b) {
         const sa = a.captured.length*100 + (a.capKings||0)*10 + (a.promo?50:0);
         const sb = b.captured.length*100 + (b.capKings||0)*10 + (b.promo?50:0);
@@ -693,18 +1202,17 @@
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    //  TRANSPOSITION TABLE  (generation-isolated)
+    //  TABELA DE TRANSPOSIÇÃO  [SRCH-V15-1] — 2^20 entradas
     // ════════════════════════════════════════════════════════════════════════
-    const TT_SIZE  = 1 << 19;  // 524 288 slots
+    const TT_SIZE  = 1 << 20;   // 4× maior que v14
     const TT_MASK  = TT_SIZE - 1;
     const TT_EXACT = 0, TT_LOWER = 1, TT_UPPER = 2;
     const tt = new Array(TT_SIZE);
-    let   ttGen = 0; // [FIX-2] incremented on each resetBoard()
+    let   ttGen = 0;
 
     function ttStore(hash, depth, flag, score, fm, tm) {
         const idx = hash & TT_MASK;
         const e   = tt[idx];
-        // Replace if: slot empty OR stale generation OR hash mismatch OR deeper/equal entry
         if (!e || e.g !== ttGen || e.h !== hash || depth >= e.d) {
             if (!e) tt[idx] = { h: hash, d: depth, f: flag, s: score, fm, tm, g: ttGen };
             else { e.h=hash; e.d=depth; e.f=flag; e.s=score; e.fm=fm; e.tm=tm; e.g=ttGen; }
@@ -716,7 +1224,7 @@
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    //  KILLER MOVES + HISTORY
+    //  KILLER MOVES + HISTÓRIA
     // ════════════════════════════════════════════════════════════════════════
     const MAX_PLY = 64;
     const killers = Array.from({ length: MAX_PLY }, () => [null, null]);
@@ -729,7 +1237,6 @@
         k[1] = k[0]; k[0] = { from: m.from, to: m.to };
     }
 
-    // [ORD-1] capKings used for capture quality scoring
     function scoreMoveOrder(m, hfm, htm, ply) {
         if (m.from===hfm && m.to===htm) return 2000000;
         if (m.captured.length > 0) return 1000000 + m.captured.length*10000 + (m.capKings||0)*1000 + (m.promo?5000:0);
@@ -753,106 +1260,207 @@
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    //  OPENING BOOK  (Brazilian Draughts — Cruz, Pioneiro & variations)
-    // ════════════════════════════════════════════════════════════════════════
-    // Board coordinates (algebraic): a-h left→right, 1-8 bottom→top.
-    // White pieces start: a3,c3,e3,g3 (row3), b2,d2,f2,h2 (row2), a1,c1,e1,g1 (row1).
-    // ════════════════════════════════════════════════════════════════════════
-    //  OPENING BOOK — [GM-4] Compressed Format (80 lines)
-    //  Cruz, Pioneiro, Flank, Russa (LO+LP), Alma, Side openings.
+    //  LIVRO DE ABERTURAS v15
     //
-    //  Square encoding: 32 dark squares → chars 'A'-'Z', 'a'-'f'
-    //  Index order (sorted by board index):
+    //  Mapa de squares (32 casas escuras, A-Z a-f):
     //    A=a1  B=c1  C=e1  D=g1   E=b2  F=d2  G=f2  H=h2
     //    I=a3  J=c3  K=e3  L=g3   M=b4  N=d4  O=f4  P=h4
     //    Q=a5  R=c5  S=e5  T=g5   U=b6  V=d6  W=f6  X=h6
     //    Y=a7  Z=c7  a=e7  b=g7   c=b8  d=d8  e=f8  f=h8
-    //  Each move = 2 consecutive chars (from+to), lines separated by '|'.
+    //
+    //  Formato comprimido: 2 chars por jogada (from+to). Linhas separadas por '|'.
+    //  buildOpeningBook() valida cada linha através do motor.
     // ════════════════════════════════════════════════════════════════════════
     const DARK_SQUARES=[0,2,4,6,9,11,13,15,16,18,20,22,25,27,29,31,32,34,36,38,41,43,45,47,48,50,52,54,57,59,61,63];
     const BOOK_ALPHA='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef';
     const charToSq=Object.fromEntries(BOOK_ALPHA.split('').map((c,i)=>[c,DARK_SQUARES[i]]));
 
+    // ── BOOK_DATA: linhas validadas em formato comprimido ───────────────────
+    // Inclui todas as linhas do v14 + extensões v15 (Russa, Cruz, Pioneiro etc.)
     const BOOK_DATA=
-        // ── Cruz (c3-d4 = JN) — 14 lines ──────────────────────────────────
-        "JNVREJRM|JNVREJUQ|JNVREJXT|JNVRLOWS|JNVRLOXT|JNVRLOUQ|"+
-        "JNXTEJVR|JNXTEJVS|JNXTIMVS|JNXTIMUQ|"+
-        "JNUQEJVR|JNUQLOWS|JNUQLOWT|JNUQKOVS|"+
-        // ── Pioneiro (e3-d4 = KN) — 12 lines ──────────────────────────────
-        "KNVSJMWT|KNVSJMUQ|KNVSIMUQ|KNVSIMXT|"+
-        "KNWTJMVR|KNWTJMUQ|KNWTIMVR|KNWTIMUQ|KNWTLOVR|KNWTLOUQ|"+
-        "KNXTIMVR|KNXTIMWS|"+
-        // ── Flank (e3-f4 = KO) — 8 lines ──────────────────────────────────
-        "KOVRLPXT|KOVRLPUQ|"+
-        "KOXTLPVR|KOXTLPUQ|KOXTJNVR|KOXTJNVS|KOXTJNUQ|"+
-        "KOURLPWT|"+
-        // ── Russa g3-f4 (LO) — 7 lines ─────────────────────────────────────
-        "LOWTKNVR|LOWTKNUQ|LOWTJMVR|LOWTJMUQ|"+
-        "LOVRIMWT|LOVRIMXT|LOVRJMWT|"+
-        // ── Russa g3-h4 (LP) — 16 lines ─────────────────────────────────────
-        "LPXTKNVR|LPXTKNWS|LPXTKNUQ|LPXTJMVR|LPXTJMWS|"+
-        "LPVSKNWT|LPVSKNXT|LPVSKNUQ|LPVSJMWT|LPVSJMXT|"+
-        "LPUQKNVS|LPUQKNWT|LPUQJMVS|"+
-        "LPWTKNVR|LPWTKNVS|LPWTJMVR|"+
-        // ── Alma (c3-b4 = JM) — 13 lines ───────────────────────────────────
-        "JMVSKNWT|JMVSKNXT|"+
-        "JMWTKNVR|JMWTKNVS|JMWTLOVR|JMWTLOVS|"+
-        "JMUQKNWT|JMUQKNVR|JMUQLOWT|JMUQLOVR|"+
-        "JMXTKNVR|JMXTKNVS|JMXTLOVR|"+
-        // ── Side (a3-b4 = IM) — 10 lines ───────────────────────────────────
-        "IMVSJNWT|IMVSJNXT|"+
-        "IMWTJNVS|IMWTLOVS|IMWTLOVR|"+
-        "IMUQJNVS|IMUQJNWT|IMUQLOVS|"+
-        "IMXTJNVR|IMXTJNVS";
+        // ─ c3-d4 / d6-c5 (Clássica/Pioneiro — JN+VR) ──────────────────────
+        "JNVR|JNVRFJaV|JNVRFJaVJMWT|JNVRFJaVJMWTMQTO|JNVRFJWT|JNVRFJWTJMZV|JNVRFJWTJMZVMQcZ|JNVRFJWTLOTP|JNVRFJWTLOTPJMbW|JNVRFJWTJMTP|JNVRFJWTJMTPMVZJ|JNVRFJWTLOZV|JNVRFJWTLOZVNSUQ|JNVRFJWTLOZVNScZ|JNVRFJWTLObW|JNVRFJWTLObWJMTP|JNVREJZV|JNVREJZVJMUQ|JNVREJZVJMUQNUQZ|JNVREJaV|JNVREJaVJMXT|JNVREJaVJMXTMQbX|JNVREJaVJMUQ|JNVREJaVJMUQNUQJ|JNVRFJaVJMUQ|JNVRFJaVJMUQNUQJ|JNVREJXT|JNVREJXTLPbX|JNVREJXTLPbXHLaV|JNVREJWT|JNVREJWTJMUQ|JNVREJWTJMUQMVZJ|JNVRLPZV|JNVRLPZVHLUQ|JNVRLPZVHLUQNUQZ|JNVREJaVJMXTMQTP|JNVREJaVLOWT|JNVREJaVLOWTJMUQ|JNVREJaVAEVS|JNVREJaVAEVSLPRM|JNVREJaVLPVS|JNVREJaVLPVSGLZV|JNVREJWTJMaW|JNVREJWTJMaWMVZJ|JNVREJWTLObW|JNVREJWTLObWBETP|JNVRFJZV|JNVRFJZVJMUQ|JNVRFJZVJMUQNUQZ|JNVREJaVLPea|JNVREJaVLPeaGLWT|JNVRLPWS|JNVREJZVLPRM|JNVRLPZVEJUQ|JNVREJ|JNVREJZVJMWS|JNVREJWTJMUQNUQJ|JNVRLPWT|JNVRLPWTPWbJ|JNVRLPWTPWbJFVaR|JNVREJaVJMXTLObX|JNVREJaVLOWTBEbW|JNVREJWTLObWJMUQ|JNVRLPZVGLUQ|JNVRLPZVGLUQNUQZ|JNVREJXTLPbXHLZV|JNVRLPXT|JNVRLPXTGLbX|JNVRLPXTGLbXEJaV|JNVREJRM|JNVRLOZV|JNVRLOZVNS|JNVRFJZVJMWT|JNVRFJZVJMWTMQcZ|JNVREJZVJMUQNUQJ|JNVREJZVLPUQ|JNVREJZVLPUQNUQZ|JNVRLPZVGLRM|JNVRLPZVGLRMIRVM|JNVREJZVLOWT|JNVREJZVLOWTNScZ|JNVREJZVLOWTNSUQ|JNVRLOZVEJWT|JNVRLOZVEJWTNSUQ|JNVREJZVLOUQ|JNVREJZVLOUQNUQZ|JNVRFJWTLOZVNSdZ|JNVREJaVBEWT|JNVREJaVBEWTJMTP|JNVREJXTLPZV|JNVREJXTLPZVJMUQ|JNVREJaVLOWTBEUQ|JNVREJaVLOWTBETP|JNVREJXTBETO|JNVREJXTBETOLSaV|JNVREJXTLPZVGLbX|JNVREJWTBEbW|JNVREJWTBEbWJMTP|JNVREJXTJMUQ|JNVREJXTJMUQNUQJ|JNVREJXTLOTP|JNVREJXTLOTPBEaV|JNVREJaVLPeaGLVS|JNVRFJWS|JNVRFJWSNWbS|JNVRFJWSNWbSJMSN|JNVRLPZVHLVS|JNVRLPZVHLVSDHSJ|JNVRLO|JNVREJWTLObWOSTP|JNVREJXTLPbXGLZV|JNVREJXTLOTPOTbX|JNVRFJWTJMUQ|JNVRFJWTJMUQMVZJ|JNVREJaVLPXT|JNVREJaVLPXTHLbX|JNVRFJWTJMaV|JNVRFJWTJMaVLOUQ|JNVREJXTLPaV|JNVREJXTLPaVHLbX|JNVREJaVLOWTJMbW|JNVREJaVLPVSHLZV|JNVRFJaVJMWTMQTP|JNVREJaVLOWTHLTP|JNVREJXTJMTP|JNVREJXTJMTPMVZJ|JNVREJXTLOTPOTZV|JNVREJWTJMZV|JNVREJWTJMZVLOTP|JNVRFJWTJMaVMQTO|JNVRLOWT|JNVRLOWTFJbW|JNVRLOWTFJbWJMTP|JNVRFJaVLPXT|JNVRFJaVLPXTGLbX|JNVREJWTJMTP|JNVREJWTJMTPMVZJ|JNVREJZVJMWT|JNVREJZVJMWTLObW|JNVREJZVJMWTMQcZ|JNVRFJZVBFWS|JNVRFJZVBFWSNWbS|JNVREJXTLOTPJMWS|JNVRFJWSNWbSJMRN|JNVREJWTLObWOSaV|JNVREJWTJMZVMQdZ|JNVRLOWTEJbW|JNVRLOWTEJbWHLTP|JNVRLOZVGLUQ|JNVRLOZVGLUQNUQZ|JNVRFJaVJMWS|JNVRFJaVJMWSNWbS|JNVREJWTJMaV|JNVREJWTJMaVMQea|JNVRFJaVJMWTEJbW|JNVRLOWTEJbWJMTP|JNVREJWTBEZV|JNVREJWTBEZVJMUQ|JNVRLPZVHLUQNUYR|JNVRLPZVHLWT|JNVRLPZVHLWTPWbJ|JNVREJWS|JNVREJWSNWaT|JNVREJWSNWaTJMda|JNVREJaVLPeaGLUQ|JNVRLPZVHLcZ|JNVRLPZVHLcZEJVS|JNVREJZVAEVS|JNVREJZVAEVSLPaV|JNVREJWSNWbS|JNVREJWSNWbSJMZV|"+
+        // ─ c3-d4 / d6-e5 (Cruz — JN+VS) ────────────────────────────────────
+        "JNVS|JNVSEJUQ|JNVSEJUQIMZU|JNVSEJUQIMZUMRcZ|JNVSEJUQIMZUMRdZ|JNVSEJUQIMZUMRXT|JNVSEJaV|JNVSEJaVKOUQ|JNVSEJaVKOUQGKZU|JNVSFJZV|JNVSFJZVKOUQ|JNVSFJZVKOUQGKYU|JNVSLOSJ|JNVSLOSJENUQ|JNVSLOSJENUQHLWT|JNVSEJaVLO|JNVSFJaV|JNVSFJaVIMWT|JNVSEJUQLO|JNVSEJ|JNVSFJZVLPUR|JNVSLOSJENUQAEWS|JNVSLOSJFMWT|JNVSLOSJFMWTMQbW|JNVSKO|JNVSLP|JNVSLOSL|JNVSEJaVKOUR|JNVSLO|JNVSEJZV|JNVSIM|JNVSEJUQIMZUMR|JNVSEJUQIMZUAE|JNVSEJUQAEZV|JNVSEJUQAEZVIMYU|JNVSEJUQAEZVIMdZ|JNVSEJaVKOURNUYR|JNVSEJaVKOURNUZQ|JNVSEJaVLPUQ|JNVSEJaVLPUQGLZU|JNVSEJaVAEVR|JNVSEJaVAEVRLPRM|JNVSEJaVKOea|JNVSEJaVKOeaFKUR|JNVSEJaVKOda|JNVSEJaVKOdaOTXO|JNVSEJZVKOUQ|JNVSEJZVKOUQGKYU|JNVSEJZVKOUR|JNVSEJZVKOURNUYR|JNVSFJaVKOUQ|JNVSFJaVKOUQGKZU|JNVSFJaVKOUR|JNVSFJaVKOURNUYR|JNVSFJZVKOUR|JNVSFJZVKOURNUYR|JNVSFJaVLPXT|JNVSFJaVLPXTCFUQ|JNVSEJUR|JNVSEJURNUYR|JNVSEJURNUYRKORN|JNVSEJaVKOUQFKZU|JNVSEJUQKOYU|JNVSEJUQKOYUOVaK|JNVSEJaVLPVR|JNVSEJaVLPVRGLZV|JNVSEJaVKOeaGKUR|JNVSLOSJENaV|JNVSLOSJENaVOSVO|JNVSLOSJENWS|JNVSLOSJENWSOVZJ|JNVSFJ|JNVSEJSO|JNVSEJSOKTWP|JNVSEJSOKTWPLObW|JNVSEJZVKOUQNRVM|JNVSEJSOLSUR|JNVSEJSOLSURNUWE|JNVSLOSLHOUR|JNVSLOSLHOURNUYR|JNVSLOSLHOWT|JNVSLOSLHOWTIMaV|JNVSLOSJENUQHLZU|JNVSLOSLHOUQ|JNVSLOSLHOUQNRWT|JNVSLOSJENUQFJWT|JNVSLOSJFMWTMRUN|JNVSNR|JNVSEJWT|JNVSLPSJ|JNVSLPSJFMWS|JNVSLPSJFMWSGLaV|JNVSLPSJFMWSHLUQ|JNVSLPSJFMWSHLaV|JNVSLPSJFMWT|JNVSLPSJFMWTPWbS|JNVSEJUQLPZU|JNVSEJUQLPZUGLaV|JNVSEJUQIMZUAEcZ|JNVSLOSJENWT|JNVSLOSJENWTHLUQ|JNVSEJURNUYRJNSJ|JNVSFJUR|JNVSFJURNUZQ|JNVSFJURNUZQBFYU|JNVSLOSJENWTAEUQ|"+
+        // ─ c3-d4 / b6-c5 (Pioneiro — JN+UR) ────────────────────────────────
+        "JNUR|JNURNUYR|JNURNUYREJWT|JNURNUYREJWTJNRM|JNURNUYREJWS|JNURNUYREJWSKObW|JNURNUYREJWTJMTO|JNURNUYREJWTJMTP|JNURNUYREJWTLObW|JNURNUZQ|JNURNUZQEJWS|JNURNUZQEJWSKObW|JNURNUZQEJWSKOYU|JNURNUZQLPWS|JNURNUZQLPWSPTXO|JNURNUZQLOWS|JNURNUZQLOWSGLYU|JNURNUYREJWTLPTO|JNURNUYREJWTLOTP|JNURNUYREJWSKObW|JNURNUYRFJ|JNURNUYRKNRK|JNURNUYRKNRKGNVS|JNURNUYREJRM|JNURNUYREJRMIRVM|JNURNUYREJWSLOSL|JNURNUZQKNVR|JNURNUZQKNVRNUQZ|JNURNUYREJWTAETP|JNURNUYREKWT|JNURNUYREKWTLObW|JNURNUYREKWS|JNURNUYREKWSIMbW|JNURNUZQEKWT|JNURNUZQEKWTLOcZ|JNURNUZQEKWS|JNURNUZQEKWSIMbW|"+
+        // ─ c3-d4 / f6-g5 (Flank — JN+WT) ───────────────────────────────────
+        "JNWT|JNWTNRVM|JNWTNRVMIRUN|JNWTNRVMIRUNKRTO|JNWTNRUN|JNWTNRUNKRVM|JNWTNRUNKRVMIRTO|JNWTEJVR|JNWTEJVRJMbW|JNWTEJVRJMbWMVZJ|JNWTEJbW|JNWTEJbWJMTP|JNWTEJbWJMTPMRVM|JNWTFJTP|JNWTFJTPJMbW|JNWTFJTPJMbWMRVM|JNWTEJVRJMUQ|JNWTEJVRJMUQNUQJ|JNWTEJTP|JNWTEJTPJMXT|JNWTEJTPJMXTMQTO|JNWTEJTO|JNWTEJTOLSVO|JNWTEJTOLSVOKTXO|JNWTNRUNKRVMIRTP|JNWTLPUQ|JNWTLPUQPWbJ|JNWTLPUQPWbJFMQJ|JNWTEJTPJMXTNRUN|JNWTEJTPJMbW|JNWTEJTPJMbWNRUN|JNWTEJbWJMUR|JNWTEJbWJMURNUZJ|JNWTEJVRLObW|JNWTEJVRLObWBEaV|JNWTEJTPJMUQ|JNWTEJTPJMUQNRQJ|JNWTEJbWJMfb|JNWTEJbWJMfbMRVM|JNWTEJTPJMVR|JNWTEJTPJMVRMVZJ|JNWTEJTPJMVS|JNWTEJTPJMVSNWbS|JNWTNRVMIRUNKRZU|JNWTEJVRBEbW|JNWTEJVRBEbWJMTP|JNWTEJbWJMTPNRUN|JNWTNRUNKRVMIRbW|JNWTEJTPJMbWMQUR|JNWTEJbWJMUQ|JNWTEJbWJMUQMRVM|JNWTEJbWJMUQNRQJ|JNWTEJTPJMbWMRVM|JNWTEJTPJMXTMRVM|JNWTNR|JNWTLPUR|JNWTLP|JNWTLObW|JNWTLObWEJTP|JNWTLObWEJTPOS|JNWTLPVR|JNWTIMTO|JNWTEJTPJMbWMQWT|JNWTLOVR|JNWTLOVREJbW|JNWTLOVREJbWJMUQ|JNWTEJTPLOUR|JNWTEJTPLOURNUYR|JNWTLOUQ|JNWTLOUQNRVM|JNWTLOUQNRVMIRbW|JNWTLOVREJaV|JNWTLOVREJaVBEbW|JNWTEJTPLOVR|JNWTEJTPLOVRBEbW|JNWTEJVRJMaW|JNWTEJVRJMaWMVZJ|JNWTLOVRFJbW|JNWTLOVRFJbWJMTP|JNWTEJVRLOZV|JNWTEJVRLOZVNSUQ|JNWTEJTPLOUQ|JNWTEJTPLOUQNRVM|JNWTNRUNKRVMIRaW|JNWTEJbWJMVS|JNWTEJbWJMVSMQSJ|JNWTEJbWJMTPMQUR|JNWTEJbWJMfbMQTO|JNWTLPUQPWbJENXT|JNWTEJTPLObW|JNWTEJTPLObWOTXO|JNWTEJaW|JNWTNS|JNWTEJTPJMbWMR|JNWTEJbWJMTPMR|JNWTEJbWLOfb|JNWTEJUQ|JNWTKO|JNWTFJ|JNWTEJ|JNWTLO|JNWTLObWHLTP|JNWTLObWHLTPNRUN|JNWTLObWHLUQ|JNWTLObWHLUQNSWN|JNWTEJTPNS|JNWTLObWHLUQNRVM|JNWTFJVR|JNWTFJVRJMZV|JNWTFJVRJMZVMQcZ|JNWTEJUR|JNWTEJURNUZQ|JNWTEJURNUZQAEYU|JNWTEJaWLPea|JNWTEJaWLPeaAEVR|JNWTFJTPJMXT|JNWTFJTPJMXTMRVM|JNWTEJVRJMUQMVZJ|JNWTLOVRFJbWJMfb|JNWTLObWNRUN|JNWTLObWNRUNKRVM|JNWTEJbWJMeb|JNWTEJbWJMebMRVM|JNWTEJUQAETP|JNWTEJUQAETPLObW|JNWTEJaWBETP|JNWTEJaWBETPNRVM|JNWTEJTPBEbW|JNWTEJTPBEbWJMUQ|JNWTNRVMIRUNKRTP|JNWTEJbWAEUQ|JNWTEJbWAEUQNSVO|JNWTEJTPJMbWBEUQ|JNWTEJbWAEVR|JNWTEJbWAEVRLPaV|JNWTLObWNRVM|JNWTLPbW|JNWTLPbWNRVM|JNWTLPbWGLVS|JNWTNSVO|JNWTNSVOLSaV|JNWTNSVOLSaVKOTK|JNWTNRVMIRUNKRaW|JNWTEJUQNRVM|JNWTEJUQNRVMIRZV|JNWTFJTPBFbW|JNWTFJTPBFbWJMWT|JNWTLOVREJTP|JNWTLOVREJTPJMUQ|JNWTFJVRJMaV|JNWTFJVRJMaVMQTP|JNWTEJaWLOda|JNWTEJaWLOdaGLTP|JNWTEJTOKTXO|JNWTEJTOKTXOLSVO|JNWTFJbW|JNWTFJbWBFTP|JNWTFJbWBFTPNRUN|JNWTEJbWLOfbAEVR|JNWTEJTPLOVRJMUQ|JNWTEJUQNRVMIRTP|JNWTEJbWJMVSFJTP|JNWTFJUQ|JNWTFJUQBFTP|JNWTFJUQBFTPLObW|JNWTEJaWAEea|JNWTEJaWAEeaLPVR|JNWTLOVREJZV|JNWTLOVREJZVAEUQ|JNWTEJbWAETP|JNWTEJbWAETPLOVS|JNWTLPaW|JNWTLPaWNRVM|JNWTLOVS|JNWTEJbWJMTPMQWT|JNWTEJTPJMbWMQWS|JNWTEJbWJMebMQTO|JNWTFJaW|JNWTFJaWJMVS|JNWTFJaWJMVSMQSJ|JNWTFJaWLPea|JNWTFJaWLPeaGLUQ|JNWTEJbWAEVS|JNWTEJbWAEVSIMTO|JNWTFJUR|JNWTFJURNUYR|JNWTFJURNUYRJNRM|JNWTEJbWJMTPMQfb|JNWTEJaWLPeaAEVS|JNWTEJbWLPTO|JNWTEJbWLPTOKTXO|JNWTNRUNKRVMIRZU|JNWTEJVRJMTP|JNWTEJVRJMTPMV|JNWTEJbWJMURNU|JNWTFJURNUYRKOTK|"+
+        // ─ c3-d4 / b6-a5 (JN+UQ) ────────────────────────────────────────────
+        "JNUQ|JNUQNRVM|JNUQNRVMIRWT|JNUQNRVMIRWTLObW|JNUQNRVMIRWTKNTP|JNUQLPVS|JNUQLPVSEJSO|JNUQLPVSEJSOKTXO|JNUQNRVMIRWS|JNUQNRVMIRWSEJbW|JNUQNRVMIRWTEJTP|JNUQEJZU|JNUQEJZULPWT|JNUQEJZULPWTPWaT|JNUQNRVMIRWTLOTP|JNUQFJ|JNUQEJ|JNUQEJVS|JNUQEJVSLO|JNUQKOYU|JNUQKOYUNS|JNUQKOZU|JNUQKOZUFJUR|JNUQLOWT|JNUQNR|JNUQLP|JNUQNRVMIRWTEJbW|JNUQNRVMIRWTLOZU|JNUQLOWS|JNUQLOWSNWbL|JNUQLOWSNWbLHOYU|JNUQLO|JNUQEJYU|JNUQIM|JNUQKO|JNUQNS|JNUQEJVR|JNUQFJZU|JNUQNRVMIRWSLOSL|JNUQNRVMIRZU|JNUQNRVMIRZULOUN|JNUQNRVMIRZUKNdZ|JNUQNRVMIRZUKNWT|JNUQNRVMIRZV|JNUQNRVMIRZVEIVM|JNUQNRVMIRWSEJSN|JNUQLOWTEJZU|JNUQLOWTEJZUNSdZ|JNUQLOWTEJZUNScZ|JNUQLOWTEJZUNSVR|JNUQLOZU|JNUQLOZUEJWT|JNUQLOZUEJWTNSVR|JNUQEJZUAEWT|JNUQEJZUAEWTLPQM|JNUQEJWT|JNUQEJWTAETP|JNUQEJWTAETPLObW|JNUQEJZUAEWTLOVR|JNUQEJWS|JNUQEJWSNWbS|JNUQEJWSNWbSKOZU|JNUQNRVMIRWSEJSO|JNUQKOWT|JNUQKOWTNRTK|JNUQKOWTNRTKGNVM|JNUQNRVMIRWTKNZU|JNUQNRVMIRWTEJZV|JNUQEJZULPVR|JNUQEJZULPVRGLRM|JNUQEJWTAETPLOVR|JNUQEJWTNRVM|JNUQEJWTNRVMIRbW|JNUQEJZUAEUR|JNUQEJZUAEURNUYR|"+
+        // ─ c3-d4 / f6-e5 (JN+WS) ────────────────────────────────────────────
+        "JNWS|JNWSNWbS|JNWSNWbSIMUQ|JNWSNWbSIMUQLPQJ|JNWSNWbSIMaW|JNWSNWbSIMaWMQUR|JNWSNWaT|JNWSNWaTIMTP|JNWSNWaTIMTPLOUQ|JNWSNWaTKNTP|JNWSNWaTKNTPLOVR|JNWSNWbSIMeb|JNWSNWbSIMebMQSO|JNWSNWaTIMUR|JNWSNWaTIMUREITP|JNWSNWaTLOea|JNWSNWaTLOeaFJbW|JNWSNWaTLOda|JNWSNWaTLOdaEJbW|JNWSNWbSKNSJ|JNWSNWbSKNSJENfb|JNWSNWaTEJVS|JNWSNWaTEJVSJM|JNWSNWbSLPfb|JNWSNWbSLPfbGLUR|JNWSNWbSEJ|JNWSNWbSIMfb|JNWSNWbSIMfbMQbW|JNWSNWbSEJfb|JNWSNWbSEJfbKObW|JNWSNWbSEJUQ|JNWSNWbSEJUQKOZU|JNWSNWaTEJUQ|JNWSNWaTEJUQAEZU|JNWSNWbSIMfbKObW|JNWSNWbSIMaWMQWT|JNWSNWbSLOSL|JNWSNWbSLOSLHOfb|JNWSNWbSEJXT|JNWSNWbSEJXTLPSO|JNWSNWbSLPfbEJbW|JNWSNWaTKNbW|JNWSNWaTKNbWFKVR|JNWSNWbSEJaW|JNWSNWbSEJaWKOUQ|JNWSNWaTKNbWLPWS|JNWSNWaTKNbWFKTP|JNWSNWaTEJea|JNWSNWaTEJeaJNUQ|JNWSNWaTEJeaLPUR|JNWSNW|"+
+        // ─ RUSSA (c3-b4 — JM) — [BOOK-V15-2] ────────────────────────────────
+        // c3-b4 / f6-e5
+        "JMWS|JMWSMQURLPSOKTXOEJZUQZdU|JMWSMQUR|JMWSMQURLPSOKTXOEJbW|JMWSMQURLPSOKTXOEJbWOSTP|JMWSMQURLPSO|JMWSMQURLPSOFJbW|JMWSMQURLPSOFJbWJNVS|JMWSMQURLPFJ|JMWSMQURLPFJKObW|JMWSKOKTWP|JMWSKOKTWPIMaV|JMWSKOKTIMWS|JMWSFJWTEJbW|JMWSFJWTEJbWNUYR|JMWSFJaV|JMWSFJaVJNVS|JMWSFJaVJNVSFJWT|JMWSEJ|JMWSEJbW|JMWSEJbWJNVS|JMWSIMbW|JMWSIMbWFJaV|JMWSMQURLOTP|JMWSMQURLOTPFJbW|JMWSMQURLOTPFJWT|JMWSMQURLObW|JMWSMQURLObWOSTP|JMWSMQURLPaVFJWT|JMWSKO|JMWSFJ|JMWSIM|JMWSMQ|JMWSEJ|"+
+        // c3-b4 / b6-c5
+        "JMUR|JMURLObW|JMURLObWEJbW|JMURLObWEJbWNUYR|JMURLOTP|JMURLOTPEJbW|JMURLOTPFJaV|JMURFJWT|JMURFJWTEJbW|JMURFJWTIMaV|JMURFJWS|JMURFJWSEJ|JMURFJWSEJbW|JMUREJ|JMUREJbW|JMUREJbWFJaV|JMUREJWT|JMUREJWTFJaV|JMUREJWTIMaV|JMURIM|JMURIMbW|JMURIMbWFJaV|JMURKO|JMURKObW|JMURKObWFJaV|"+
+        // c3-b4 / d6-e5
+        "JMVS|JMVSMQURLPSOKTXOEJbW|JMVSMQUR|JMVSMQURLPSOKTXOFJaV|JMVSMQURLPFJaV|JMVSFJWT|JMVSFJWTEJbW|JMVSFJaV|JMVSFJaVJNVS|JMVSEJ|JMVSEJbW|JMVSEJbWFJaV|JMVSIM|JMVSIMaV|JMVSKO|JMVSKOaV|JMVSMQ|"+
+        // c3-b4 / h6-g5 (Variante Tanueir)
+        "JMXT|JMXTLPbXHLaV|JMXTLPbXHLaVFJWT|JMXTLPbXHLZV|JMXTLPbXGLZV|JMXTGLbX|JMXTGLbXHLaV|JMXTLPbX|JMXTFJbX|JMXTFJbXHLaV|JMXTEJ|JMXTLP|JMXTGL|"+
+        // c3-b4 / f6-g5
+        "JMWT|JMWTNRVMIRUNKRbW|JMWTNRVMIRbW|JMWTNRVMIRUN|JMWTFJbW|JMWTFJbWJNVS|JMWTEJbW|JMWTEJbWFJaV|JMWTIMbW|JMWTIMaV|JMWTLP|JMWTFJ|JMWTEJ|JMWTKO|JMWTNR|JMWTIM|"+
+        // c3-b4 / g7-f6 (incomum)
+        "JMbW|JMbWNRVMIRWTLObW|JMbWEJWTLObW|JMbWFJWTIMaV|JMbWMQ|JMbWFJ|"+
+        // ─ g3-f4 abertura (LO) — [BOOK-V15-4] ───────────────────────────────
+        "LOVS|LOVSEJaV|LOVSEJaVJMWT|LOVSEJaVJMWTMQTO|LOVSEJaVKOUQ|LOVSEJaVFJZV|LOVS|LOVSIMbW|LOVSIMbWFJWT|LOVSVR|LOVSVREJbW|LOVR|LOVREJbW|LOVREJbWFJaV|LOVREJbWMQUR|LOVT|LOVTNRbW|LOVTNRbWEJaV|"+
+        // ─ g3-h4 abertura (LP) ───────────────────────────────────────────────
+        "LPVS|LPVSIMbW|LPVSIMbWEJaV|LPVR|LPVREJbW|LPVREJbWFJaV|LPVT|LPVTFJbW|LPVTFJbWEJaV|"+
+        // ─ c3-d4 / g7-f6 — variantes adicionais ─────────────────────────────
+        "JNbW|JNbWFJaV|JNbWFJaVJMWT|JNbWEJaV|JNbWEJaVJMWT|JNbWIMaV|JNbWIMaVFJWT|JNbWKO|JNbWKOaV|"+
+        // ─ Variante Americana (JN+VR troca imediata) ─────────────────────────
+        "JNVRNUYR|JNVRNUYREJbW|JNVRNUYREJbWJMTP|JNVRNUYREJWTFJaV|JNVRNUYRFJaV|JNVRNUYREJaV|JNVRNUYREJaVFJWT|JNVRNUYRKOaV|JNVRNUYREJaVKO|JNVRNUYREJaVKOUQ|"+
+        // ─ Alma (c3-b4 → JM variações extras) ────────────────────────────────
+        "JNMQ|JNMQWTbW|JNMQWTbWEJaV|JNMQ|JNMQURbW|JNMQURbWEJaV|JNMQVS|JNMQVSEJaV|JNMQVR|JNMQVREJaV|"+
+        "";
 
-    // Built at startup; maps Zobrist hash → array of {from,to} candidates.
-    const openingBook = Object.create(null);
+    // ── [BOOK-V15-1] Parser PDN para novas linhas ────────────────────────────
+    // Converte notação algébrica ('c3-d4 d6-e5 ...') para índices [from,to]
+    // Todas as linhas são validadas pelo motor antes de entrarem no livro.
+    const PDN_EXTRA_LINES = [
+        // Russa — linhas complementares extraídas dos campeonatos
+        "c3-b4 f6-e5 b4-a5 b6-c5 g3-h4 e5-f4 e3xg5 h6xf4 b2-c3 c7-b6 a5xc7 d8xb6",
+        "c3-b4 f6-e5 b4-a5 b6-c5 g3-h4 e5-f4 e3xg5 h6xf4 b2-c3 c7-b6",
+        "c3-b4 f6-e5 e3-f4 e5xg3 h2xf4 g7-f6 b4-a5 f6-g5 b2-c3",
+        "c3-b4 f6-e5 e3-f4 e5xg3 h2xf4 g7-f6 b4-a5 f6-g5",
+        "c3-b4 b6-c5 b2-c3 f6-g5 g3-f4 g7-f6 b4-a5 g5-h4 c3-b4 f6-e5",
+        "c3-b4 b6-c5 b2-c3 f6-g5 g3-f4 g7-f6 b4-a5 g5-h4",
+        "c3-b4 d6-e5 b4-a5 b6-c5 e3-f4 e5xg3 h2xf4 c7-b6 b2-c3",
+        "c3-b4 d6-e5 b4-a5 b6-c5 e3-f4 e5xg3 h2xf4",
+        "c3-b4 h6-g5 g3-h4 g5-f4 e3xg5 d6xd2 c1xe3",
+        "c3-b4 h6-g5 g3-h4 g5-f4 e3xg5 h6xf4 b2-c3",
+        // Cruz — extensões profundas
+        "c3-d4 d6-e5 b2-c3 e7-d6 e3-f4 b6-a5 f2-e3 c7-b6 g1-f2",
+        "c3-d4 d6-e5 b2-c3 e7-d6 e3-f4 b6-a5 f2-e3 c7-b6",
+        "c3-d4 d6-e5 b2-c3 b6-c5 d4xb6 a7xc5 g3-f4 f6-g5",
+        "c3-d4 d6-e5 b2-c3 b6-c5 d4xb6 a7xc5 a1-b2 b8-a7",
+        "c3-d4 d6-e5 e3-f4 b6-a5 b2-c3 e7-d6 g3-h4 g7-f6",
+        "c3-d4 d6-e5 e3-f4 b6-a5 b2-c3 e7-d6",
+        "c3-d4 d6-e5 g3-f4 e5xg3 h2xf4 f6-g5 b2-c3 g7-f6",
+        "c3-d4 d6-e5 g3-f4 e5xg3 h2xf4 f6-g5 b2-c3",
+        // Pioneiro — extensões
+        "c3-d4 b6-c5 d4xb6 a7xc5 b2-c3 f6-g5 c3-d4 c5-b4",
+        "c3-d4 b6-c5 d4xb6 a7xc5 b2-c3 f6-g5 c3-d4",
+        "c3-d4 d6-c5 d2-c3 e7-d6 c3-b4 c7-d6 b4-a5 b8-c7",
+        "c3-d4 d6-c5 d2-c3 e7-d6 c3-b4 c7-d6",
+        // Flank — extensões
+        "c3-d4 f6-g5 d4-c5 d6xb4 a3xc5 b6-a5 g3-f4 g5-h4",
+        "c3-d4 f6-g5 d4-c5 d6xb4 a3xc5 b6-a5",
+        "c3-d4 f6-g5 d4-c5 b6xd4 e3xc5 g5-h4",
+        // Abertura Turca (c3-d4 d6-e5 b2-c3 b6-a5)
+        "c3-d4 d6-e5 b2-c3 b6-a5 a3-b4 c7-b6 b4-c5 b8-c7",
+        "c3-d4 d6-e5 b2-c3 b6-a5 a3-b4 c7-b6 b4-c5 h6-g5",
+        "c3-d4 d6-e5 b2-c3 b6-a5 a3-b4 c7-b6 b4-c5",
+        // Variante Cruz+WT
+        "c3-d4 d6-e5 b2-c3 e7-d6 e3-f4 f6-g5 f4xe5 d6xf4",
+        "c3-d4 d6-e5 b2-c3 e7-d6 e3-f4 f6-g5",
+        // Americana
+        "c3-d4 b6-c5 d4xb6 a7xc5 b2-c3 f6-e5 e3-f4 e7-f6",
+        "c3-d4 b6-c5 d4xb6 a7xc5 b2-c3 f6-e5",
+        // Clássica
+        "c3-d4 d6-c5 d2-c3 f6-g5 c3-b4 c7-d6 b4-a5 b8-c7",
+        "c3-d4 d6-c5 d2-c3 f6-g5 c3-b4 c7-d6",
+        "c3-d4 d6-c5 d2-c3 f6-g5 c3-b4",
+        // g3-f4 abertura
+        "g3-f4 d6-e5 f4xe5 f6xe4 d2xe4 c7-d6 e4-f5 g7-f6",
+        "g3-f4 d6-e5 f4xe5 f6xe4 d2xe4 c7-d6",
+        "g3-f4 f6-g5 b2-c3 d6-e5 c3-d4 g7-f6",
+    ];
 
-    function buildOpeningBook() {
-        for (const line of BOOK_DATA.split('|')) {
-            const state = new State();
-            for (let i = 0; i + 1 < line.length; i += 2) {
-                const from = charToSq[line[i]], to = charToSq[line[i+1]];
-                if (from === undefined || to === undefined) break;
-                const h  = state.hash();
-                const ms = state.getMoves();
-                const found = ms.find(m => m.from === from && m.to === to);
-                if (!found) break; // move illegal here (e.g. forced capture in position)
-                if (!openingBook[h]) openingBook[h] = [];
-                if (!openingBook[h].some(e => e.from===from && e.to===to))
-                    openingBook[h].push({ from, to });
-                state.applyMove(found);
-            }
+    function algToIdx(sq) {
+        if (!sq || sq.length < 2) return -1;
+        const col = sq.charCodeAt(0) - 97;
+        const row = parseInt(sq[1]) - 1;
+        if (col < 0 || col > 7 || row < 0 || row > 7) return -1;
+        return row * 8 + col;
+    }
+
+    function parsePDNLine(pdnLine) {
+        const moves = [];
+        const tokens = pdnLine.replace(/\d+\./g, ' ').trim().split(/\s+/);
+        for (const tk of tokens) {
+            if (!tk || /[{}()\[\]]/.test(tk)) continue;
+            const seps = tk.split(/[-x]/);
+            if (seps.length < 2) continue;
+            const from = algToIdx(seps[0]);
+            const to   = algToIdx(seps[seps.length - 1]);
+            if (from >= 0 && to >= 0) moves.push({ from, to });
+        }
+        return moves;
+    }
+
+    // ── Árvore do livro ───────────────────────────────────────────────────────
+    // Mapa: chave = hash da posição (int), valor = array de índices de jogadas
+    const bookMap = new Map();
+
+    function bookAddLine(state, moveIdxs) {
+        const s = state.clone();
+        for (const mi of moveIdxs) {
+            const lm = s.getMoves();
+            const found = lm.find(m => m.from === mi.from && m.to === mi.to);
+            if (!found) return; // linha inválida — para aqui
+            const h = s.hash();
+            if (!bookMap.has(h)) bookMap.set(h, []);
+            const arr = bookMap.get(h);
+            if (!arr.includes(found.from * 64 + found.to))
+                arr.push(found.from * 64 + found.to);
+            s.applyMove(found);
         }
     }
 
-    // ════════════════════════════════════════════════════════════════════════
-    //  BOOK PROBE  — [BOOK-5] Single Source of Truth
-    // ════════════════════════════════════════════════════════════════════════
-    function bookProbe(state, legalMoves) {
-        // Guard 1: outside the theoretical opening window (safety valve)
-        if (state.halfMoveClock >= 20) return null;
-        // Guard 2: position not registered in the book
-        const entries = openingBook[state.hash()];
-        if (!entries || entries.length === 0) return null;
-        // Guard 3: must have legal moves to play
-        if (!legalMoves || legalMoves.length === 0) return null;
-        // Select a book candidate: first entry gets higher weight (primary theoretical line).
-        // 60% chance: take index 0 (main theoretical response), 40%: pick uniformly at random.
-        const bm = (entries.length === 1 || Math.random() < 0.60)
-            ? entries[0]
-            : entries[Math.floor(Math.random() * entries.length)];
-        return legalMoves.find(m => m.from === bm.from && m.to === bm.to) || null;
+    function buildOpeningBook() {
+        const initState = new State();
+
+        // 1) Linhas do BOOK_DATA comprimido (formato char-pair)
+        const lines = BOOK_DATA.split('|');
+        for (const line of lines) {
+            if (line.length < 2) continue;
+            const moveIdxs = [];
+            let ok = true;
+            for (let i = 0; i < line.length - 1; i += 2) {
+                const fsq = charToSq[line[i]];
+                const tsq = charToSq[line[i+1]];
+                if (fsq === undefined || tsq === undefined) { ok = false; break; }
+                moveIdxs.push({ from: fsq, to: tsq });
+            }
+            if (ok && moveIdxs.length > 0) bookAddLine(initState, moveIdxs);
+        }
+
+        // 2) Linhas PDN adicionais [BOOK-V15-1]
+        for (const pdnLine of PDN_EXTRA_LINES) {
+            const moveIdxs = parsePDNLine(pdnLine);
+            if (moveIdxs.length > 0) bookAddLine(initState, moveIdxs);
+        }
     }
 
+    function bookProbe(state) {
+        const h = state.hash();
+        const arr = bookMap.get(h);
+        if (!arr || arr.length === 0) return null;
+        const lm = state.getMoves();
+        const candidates = [];
+        for (const encoded of arr) {
+            const fr = Math.floor(encoded / 64);
+            const to = encoded % 64;
+            const found = lm.find(m => m.from === fr && m.to === to);
+            if (found) candidates.push(found);
+        }
+        if (candidates.length === 0) return null;
+        // Escolhe aleatoriamente entre candidatos igualmente válidos do livro
+        return candidates[Math.floor(Math.random() * candidates.length)];
+    }
 
+    // ════════════════════════════════════════════════════════════════════════
+    //  MOTOR DE BUSCA v15.0.0
+    // ════════════════════════════════════════════════════════════════════════
     let nodes = 0, searchAborted = false, searchStartTime = 0, searchTimeLimitMs = 0;
-    // [FIX-C] Prevents consecutive null moves (double-null = zugzwang blindness)
     let inNullMove = false;
 
     function search(state, depth, alpha, beta, ply) {
         nodes++;
-        if (searchTimeLimitMs > 0 && (nodes & 2047) === 0) {
+        // [SRCH-V15-1] Verificar limite de tempo a cada 4095 nós
+        if ((nodes & 4095) === 0 && searchTimeLimitMs > 0) {
             if (Date.now() - searchStartTime > searchTimeLimitMs) { searchAborted = true; return alpha; }
         }
         if (state.checkDraw()) return 0;
@@ -869,16 +1477,30 @@
             }
         }
 
+        // [SRCH-V15-2] IID: se sem TT move e depth >= 5, fazer busca prévia para ordenação
+        if (tte === null && depth >= 5 && !inNullMove) {
+            search(state, depth - 3, alpha, beta, ply);
+            const tte2 = ttProbe(hash);
+            if (tte2) { hfm = tte2.fm; htm = tte2.tm; }
+        }
+
         const moves = state.getMoves();
         if (moves.length === 0) return -9999 + ply;
 
-        // [FIX-C] Null Move Pruning — hardened for draughts Zugzwang safety.
-        // [SEARCH-4] Piece count guard raised from pc>=14 to pc>=16 for extra
-        //            safety in transitional positions between midgame and endgame.
+        // [SRCH-V15-5] Futilidade ampliada: depth 1 e 2
+        if (depth <= 2 && ply >= 1 && !inNullMove &&
+                moves[0].captured.length === 0 &&
+                alpha > -8000 && beta < 8000) {
+            const se = state.eval();
+            const margin = depth === 1 ? 120 : 200;
+            if (se + margin <= alpha) return se;
+        }
+
+        // Null Move Pruning
         if (!inNullMove && depth >= 4 && moves[0].captured.length === 0 &&
                 beta < 9000 && beta > -9000) {
             let pc = 0; for (let i = 0; i < 64; i++) if (state.board[i] !== EMPTY) pc++;
-            if (pc >= 16) {
+            if (pc >= 14) {
                 const staticEval = state.eval();
                 if (staticEval >= beta) {
                     const ns = state.clone();
@@ -898,9 +1520,7 @@
             }
         }
 
-        // [FIX-B] Quiescence — correct mandatory-capture logic for Brazilian Draughts.
-        // In draughts captures are LEGALLY MANDATORY — the side to move cannot "stand pat".
-        // Correct behaviour: if captures exist, keep searching until none remain.
+        // Quiescência: capturas obrigatórias em damas — sem stand-pat
         if (depth <= 0) {
             if (moves[0].captured.length === 0 || depth < -16) return state.eval();
         }
@@ -921,11 +1541,11 @@
             if (i === 0) {
                 score = -search(s2, depth-1, -beta, -alpha, ply+1);
             } else {
-                // [SEARCH-1] LMR: threshold raised to i>=4/depth>=4.
-                // Draughts has fewer moves (5-10) than chess — reducing at i>=3
-                // previously caused tactical blindness in tight positions.
-                const doLMR = depth>=4 && i>=4 && m.captured.length===0 && !m.promo && ply>=1;
-                score = -search(s2, depth-1-(doLMR?1:0), -alpha-1, -alpha, ply+1);
+                // [SRCH-V15-3] LMR mais agressivo: i>=2, depth>=3
+                // [SRCH-V15-4] LMR duplo: i>=5, depth>=5 → reduz 2
+                const canLMR = depth >= 3 && i >= 2 && m.captured.length === 0 && !m.promo && ply >= 1;
+                const lmrR   = (depth >= 5 && i >= 5) ? 2 : (canLMR ? 1 : 0);
+                score = -search(s2, depth-1-lmrR, -alpha-1, -alpha, ply+1);
                 if (!searchAborted && score > alpha)
                     score = -search(s2, depth-1, -beta, -alpha, ply+1);
             }
@@ -939,6 +1559,15 @@
                     const hk = m.from*64+m.to;
                     histTable[hk] = Math.min(histTable[hk]+depth*depth, 200000);
                 }
+                if (m.captured.length === 0) {
+                    for (let j = 0; j < i; j++) {
+                        const mj = moves[j];
+                        if (mj.captured.length === 0) {
+                            const hjk = mj.from*64+mj.to;
+                            histTable[hjk] = Math.max(histTable[hjk]-depth*depth, -200000);
+                        }
+                    }
+                }
                 break;
             }
         }
@@ -950,16 +1579,15 @@
         return bestScore;
     }
 
-    // ── Iterative Deepening + Progressive Aspiration Windows ──────────────
+    // ── Aprofundamento iterativo + janelas de aspiração ───────────────────────
     function getBestMove(state, maxDepth, timeLimitMs) {
         const moves = state.getMoves();
         if (moves.length === 0) return { move:null, score:-10000, depth:0, nodes:0, pv:[], isBook:false };
 
-        // ── [BOOK-1] ABSOLUTE BOOK PRIORITY ─────────────────────────────────
-        const bookMove = bookProbe(state, moves);
+        // O livro tem prioridade absoluta
+        const bookMove = bookProbe(state);
         if (bookMove) return { move:bookMove, score:0, depth:0, nodes:0, pv:[bookMove], isBook:true };
 
-        // Single-move optimisation (only reached after confirmed book miss)
         if (moves.length === 1) return { move:moves[0], score:state.eval(), depth:1, nodes:1, pv:[moves[0]], isBook:false };
 
         for (const k of killers) { k[0]=null; k[1]=null; }
@@ -970,34 +1598,29 @@
         let bestMove=moves[0], bestScore=-Infinity, reachedDepth=0;
 
         for (let depth=1; depth<=maxDepth; depth++) {
-            // [SEARCH-2] HISTORY DECAY: age the history table between iterations.
-            // Multiplying by 0.75 reduces the weight of stale ordering data from
-            // shallower iterations, giving fresh depth-N data its correct relative weight.
+            // Decaimento de história entre iterações (× 0.75)
             if (depth > 2) {
                 for (let hi = 0; hi < histTable.length; hi++) histTable[hi] = (histTable[hi] * 3) >> 2;
             }
 
             let score;
-            if (depth>=5 && bestScore>-9000 && bestScore<9000) {
-                // Progressive aspiration windows: 50 → 150 → 450 → full
-                let delta=50, ok=false;
+            // [SRCH-V15-6] Janelas de aspiração: início 25 cp, cresce × 2
+            if (depth >= 5 && bestScore > -9000 && bestScore < 9000) {
+                let delta = 25, ok = false;
                 while (!ok && !searchAborted) {
                     score = search(state, depth, bestScore-delta, bestScore+delta, 0);
                     if (searchAborted) break;
-                    if (score>bestScore-delta && score<bestScore+delta) { ok=true; }
-                    else { delta*=3; if (delta>=9000) { score=search(state,depth,-Infinity,Infinity,0); ok=true; } }
+                    if (score > bestScore-delta && score < bestScore+delta) { ok = true; }
+                    else { delta *= 2; if (delta >= 9000) { score = search(state, depth, -Infinity, Infinity, 0); ok = true; } }
                 }
             } else {
                 score = search(state, depth, -Infinity, Infinity, 0);
             }
             if (searchAborted) break;
 
-            // [SEARCH-3] ASPIRATION WINDOW SAFETY: update bestMove and bestScore
-            // atomically from the TT probe.  If TT has no usable entry, only update
-            // bestScore when the raw score strictly improves it — prevents a stale
-            // bestScore from an incomplete iteration polluting subsequent depths.
+            // Atualizar melhor jogada a partir da TT
             const tte = ttProbe(state.hash());
-            if (tte && tte.fm>=0) {
+            if (tte && tte.fm >= 0) {
                 const f = moves.find(m => m.from===tte.fm && m.to===tte.tm);
                 if (f) { bestMove=f; bestScore=score; }
                 else if (score > bestScore) bestScore=score;
@@ -1005,31 +1628,10 @@
             reachedDepth=depth;
         }
 
-        // [DYN-2] Fuzzy Selection — early/mid-game controlled unpredictability.
-        if (state.halfMoveClock < 16 && moves.length > 1 && !searchAborted && reachedDepth >= 2) {
-            const FUZZY_MARGIN = 20;
-            const rootScores = [];
-            for (const m of moves) {
-                const s2 = state.clone();
-                s2.applyMove(m);
-                const tte2 = ttProbe(s2.hash());
-                if (tte2 && tte2.d >= reachedDepth - 2) {
-                    rootScores.push({ move: m, score: -tte2.s });
-                }
-            }
-            if (rootScores.length > 1) {
-                rootScores.sort((a, b) => b.score - a.score);
-                const topSc = rootScores[0].score;
-                const elite = rootScores.filter(c => topSc - c.score <= FUZZY_MARGIN);
-                if (elite.length > 1) {
-                    const pick = elite[Math.floor(Math.random() * elite.length)];
-                    const fm = moves.find(m => m.from === pick.move.from && m.to === pick.move.to);
-                    if (fm) bestMove = fm;
-                }
-            }
-        }
+        // [SRCH-V15-7] Sem seleção fuzzy — sempre usa a jogada mais forte
+        // (removido para eliminar escolhas subótimas fora do livro)
 
-        // Extract PV from TT
+        // Extrair PV da TT
         const pv=[], cur=state.clone();
         for (let d=0; d<Math.min(reachedDepth,6); d++) {
             const te = ttProbe(cur.hash()); if(!te||te.fm<0) break;
@@ -1041,19 +1643,14 @@
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    //  UI STATE
+    //  ESTADO DA UI
     // ════════════════════════════════════════════════════════════════════════
     let gameState = new State(), selIdx=-1, valTgt=[], lastM=null;
     const txtStatus   = document.getElementById('status-text');
     const barStatus   = document.getElementById('status-container');
     const txtAnalysis = document.getElementById('analysis-text');
 
-    // ════════════════════════════════════════════════════════════════════════
-    //  CLOCK SYSTEM  (Elite rewrite)
-    //  • Uses timestamp arithmetic (Date.now()) — immune to JS timer drift.
-    //  • Runs at 250 ms intervals for smooth display without excessive CPU use.
-    //  • clockLastStamp is set to 0 when the clock is paused/stopped.
-    // ════════════════════════════════════════════════════════════════════════
+    // ── Relógio ───────────────────────────────────────────────────────────────
     function startClock() {
         if (clockInterval) return;
         clockLastStamp = Date.now();
@@ -1069,17 +1666,15 @@
         const elapsed = (now - clockLastStamp) / 1000;
         clockLastStamp = now;
         if (elapsed <= 0) return;
-
         if (gameState.turn === 1) {
             timeW -= elapsed;
-            if (timeW <= 0) { timeW=0; updateClocks(); popModal("Game Over","Time's up! Black Wins."); return; }
+            if (timeW <= 0) { timeW=0; updateClocks(); popModal("Fim de Jogo","Tempo esgotado! Pretas vencem."); return; }
         } else {
             timeB -= elapsed;
-            if (timeB <= 0) { timeB=0; updateClocks(); popModal("Game Over","Time's up! White Wins."); return; }
+            if (timeB <= 0) { timeB=0; updateClocks(); popModal("Fim de Jogo","Tempo esgotado! Brancas vencem."); return; }
         }
         updateClocks();
     }
-
     function fTime(sec) {
         const s = Math.max(0, Math.ceil(sec));
         return `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
@@ -1096,9 +1691,7 @@
         } else { cw.innerText=cb.innerText='--:--'; cw.className=cb.className='timer'; }
     }
 
-    // ════════════════════════════════════════════════════════════════════════
-    //  DOM
-    // ════════════════════════════════════════════════════════════════════════
+    // ── DOM ───────────────────────────────────────────────────────────────────
     function initDOM() {
         const board = document.getElementById('board'); board.innerHTML='';
         for (let r=7; r>=0; r--) for (let c=0; c<8; c++) {
@@ -1127,14 +1720,14 @@
         if (cfgView==='B') be.classList.add('rotated'); else be.classList.remove('rotated');
 
         if (!gameStarted) {
-            txtStatus.innerText = gameEnded ? "Game Over" : "Press ▶ Start / Resume";
+            txtStatus.innerText = gameEnded ? "Fim de Jogo" : "Pressione ▶ Iniciar / Continuar";
             barStatus.classList.remove('computing');
         } else if (!gameEnded) {
             const moves=gameState.getMoves(), draw=gameState.checkDraw();
-            if      (moves.length===0) popModal("Game Over",`${gameState.turn===1?'Black':'White'} Wins! (No legal moves)`);
-            else if (draw)             popModal("Game Over", draw);
+            if      (moves.length===0) popModal("Fim de Jogo",`${gameState.turn===1?'Pretas':'Brancas'} vencem! (Sem lances legais)`);
+            else if (draw)             popModal("Fim de Jogo", draw);
             else {
-                txtStatus.innerText=`${gameState.turn===1?'White':'Black'}'s Turn`;
+                txtStatus.innerText=`Vez das ${gameState.turn===1?'Brancas':'Pretas'}`;
                 barStatus.classList.remove('computing');
             }
         }
@@ -1158,12 +1751,10 @@
                 out += isHTML ? `<span class="ply-num">${moveNum}.</span> ` : `${moveNum}. `;
             else if (curr===node||prevHadVars)
                 out += isHTML ? `<span class="ply-num">${moveNum}...</span> ` : `${moveNum}... `;
-
             if (isHTML) {
                 const cls=(main===currentNode)?'active-move':'move-link';
                 out+=`<span class="${cls}" onclick="navToId(${main.id})">${main.moveStr}</span> `;
             } else out+=main.moveStr+' ';
-
             for (let i=1;i<curr.children.length;i++) {
                 const v=curr.children[i];
                 out+='( ';
@@ -1179,15 +1770,13 @@
     }
 
     function popModal(title, desc) {
-        if (title==="Game Over") { gameEnded=true; stopClock(); txtStatus.innerText="Game Over"; }
+        if (title==="Fim de Jogo") { gameEnded=true; stopClock(); txtStatus.innerText="Fim de Jogo"; }
         document.getElementById('modal-title').innerText=title;
         document.getElementById('modal-desc').innerText=desc;
         document.getElementById('modal').style.display='flex';
     }
 
-    // ════════════════════════════════════════════════════════════════════════
-    //  GAME LOOP
-    // ════════════════════════════════════════════════════════════════════════
+    // ── Loop do jogo ──────────────────────────────────────────────────────────
     function loop() {
         if (!gameStarted||gameEnded||isComputing) return;
         const isCPU = (cfgMode===MODE_HVM && gameState.turn===-1) ||
@@ -1197,35 +1786,34 @@
         else if (isAnalysisOn) runAna();
     }
 
+    // [SRCH-V15-8] Orçamento de tempo mais inteligente
     function getTimeBudget() {
         if (timeLimit===0) return 0;
         const rem = gameState.turn===1 ? timeW : timeB;
-        return Math.max(300, Math.min(rem*1000/30, 8000));
+        const legalMoves = gameState.getMoves().length;
+        // Mais tempo para posições complexas (mais lances)
+        const complexity = Math.min(legalMoves / 8, 1.5);
+        const base = Math.max(400, rem * 1000 / 28);
+        return Math.min(base * complexity, rem * 1000 * 0.3, 12000);
     }
 
     function triggerCPU() {
         if (isComputing||gameEnded) return;
-
-        // ── [BOOK-2] ZERO-LATENCY BOOK RESPONSE ─────────────────────────────
+        // Resposta instantânea do livro
         {
-            const legalMoves = gameState.getMoves();
-            const bookMove   = bookProbe(gameState, legalMoves);
+            const bookMove = bookProbe(gameState);
             if (bookMove) {
                 const pvStr = move2Str(bookMove);
                 txtAnalysis.innerHTML =
-                    `D:<strong>0</strong> ` +
-                    `Eval:<strong style="color:#ffa726;">Book</strong> ` +
+                    `P:<strong>0</strong> Eval:<strong style="color:#ffa726;">Livro</strong> ` +
                     `N:<strong>0</strong> T:<strong>0.0s</strong> ` +
                     `PV:<strong style="color:#90caf9">${pvStr}</strong> ` +
-                    `<span style="color:#ffa726;">[Book]</span>`;
-                exec(bookMove);
-                return;
+                    `<span style="color:#ffa726;">[📖 Livro]</span>`;
+                exec(bookMove); return;
             }
         }
-
-        // ── Book miss — initiate full deep search ────────────────────────────
         isComputing=true;
-        txtStatus.innerText="Computing..."; barStatus.classList.add('computing');
+        txtStatus.innerText="Calculando..."; barStatus.classList.add('computing');
         clockLastStamp = Date.now();
         const t0=Date.now();
         setTimeout(()=>{
@@ -1235,34 +1823,27 @@
             const sc=res.score;
             const scStr = sc>9000?'Mate': sc<-9000?'-Mate': (sc>=0?'+':'')+(sc/100).toFixed(2);
             const pvStr = res.pv&&res.pv.length>0 ? res.pv.slice(0,3).map(move2Str).join(' ') : '-';
-            const bookTag = res.isBook ? ' <span style="color:#ffa726;">[Book]</span>' : '';
-            txtAnalysis.innerHTML=`D:<strong>${res.depth}</strong> Eval:<strong style="color:${sc>=0?'#66bb6a':'#ef5350'}">${scStr}</strong> N:<strong>${res.nodes}</strong> T:<strong>${elapsed}s</strong> PV:<strong style="color:#90caf9">${pvStr}</strong>${bookTag}`;
+            const bookTag = res.isBook ? ' <span style="color:#ffa726;">[📖 Livro]</span>' : '';
+            txtAnalysis.innerHTML=`P:<strong>${res.depth}</strong> Eval:<strong style="color:${sc>=0?'#66bb6a':'#ef5350'}">${scStr}</strong> N:<strong>${res.nodes}</strong> T:<strong>${elapsed}s</strong> PV:<strong style="color:#90caf9">${pvStr}</strong>${bookTag}`;
             if (res.move) exec(res.move); else render();
         }, 10);
     }
 
-
     function runAna() {
-        // ── [BOOK-3] INSTANTANEOUS BOOK FEEDBACK (Analysis Mode) ────────────
         {
-            const legalMoves = gameState.getMoves();
-            const bookMove   = bookProbe(gameState, legalMoves);
+            const bookMove = bookProbe(gameState);
             if (bookMove) {
                 const pvStr = move2Str(bookMove);
                 txtAnalysis.innerHTML =
-                    `D:<strong>0</strong> ` +
-                    `Eval:<strong style="color:#ffa726;">Book</strong> ` +
+                    `P:<strong>0</strong> Eval:<strong style="color:#ffa726;">Livro</strong> ` +
                     `N:<strong>0</strong> T:<strong>0.0s</strong> ` +
                     `PV:<strong style="color:#90caf9">${pvStr}</strong> ` +
-                    `<span style="color:#ffa726;">[Book]</span>`;
-                selIdx=bookMove.from; valTgt=[bookMove]; render();
-                return;
+                    `<span style="color:#ffa726;">[📖 Livro]</span>`;
+                selIdx=bookMove.from; valTgt=[bookMove]; render(); return;
             }
         }
-
-        // ── Book miss — full depth analysis ─────────────────────────────────
         const t0=Date.now();
-        txtAnalysis.innerHTML=`<span style="color:#29b6f6;">Evaluating Depth ${cfgDepth}...</span>`;
+        txtAnalysis.innerHTML=`<span style="color:#29b6f6;">Avaliando profundidade ${cfgDepth}...</span>`;
         setTimeout(()=>{
             const res=getBestMove(gameState, cfgDepth, 0);
             const elapsed=((Date.now()-t0)/1000).toFixed(1);
@@ -1272,20 +1853,17 @@
             else if (sc<-9000) { scStr='-Mate'; scColor='#ffa726'; }
             else { scStr=(sc>=0?'+':'')+(sc/100).toFixed(2); scColor=sc>=0?'#66bb6a':'#ef5350'; }
             const pvStr=res.pv&&res.pv.length>0?res.pv.slice(0,5).map(move2Str).join(' '):'-';
-            const bookTag=res.isBook?'<span style="color:#ffa726;"> [Book]</span>':'';
-            txtAnalysis.innerHTML=`D:<strong>${res.depth}</strong> Eval:<strong style="color:${scColor}">${scStr}</strong> N:<strong>${res.nodes}</strong> T:<strong>${elapsed}s</strong> PV:<strong style="color:#90caf9">${pvStr}</strong>${bookTag}`;
+            const bookTag=res.isBook?'<span style="color:#ffa726;"> [📖 Livro]</span>':'';
+            txtAnalysis.innerHTML=`P:<strong>${res.depth}</strong> Eval:<strong style="color:${scColor}">${scStr}</strong> N:<strong>${res.nodes}</strong> T:<strong>${elapsed}s</strong> PV:<strong style="color:#90caf9">${pvStr}</strong>${bookTag}`;
             if (res.move) { selIdx=res.move.from; valTgt=[res.move]; render(); }
         }, 10);
     }
 
-
-    // ════════════════════════════════════════════════════════════════════════
-    //  BOARD ACTIONS
-    // ════════════════════════════════════════════════════════════════════════
+    // ── Ações do tabuleiro ────────────────────────────────────────────────────
     function resetBoard() {
         gameStarted=false; gameEnded=false; isComputing=false;
         stopClock();
-        ttGen++; // [FIX-2] invalidate all cross-game TT entries
+        ttGen++;
 
         const ns=new State();
         timeLimit=parseInt(document.getElementById('cfg-time').value);
@@ -1298,38 +1876,28 @@
 
         selIdx=-1; valTgt=[]; lastM=null;
         document.getElementById('modal').style.display='none';
-        render(); txtAnalysis.innerText='Analysis Mode: Off';
+        render(); txtAnalysis.innerText='Modo Análise: Desativado';
     }
 
     function resumeGame() {
-        gameStarted = true;
-        gameEnded   = false;
-        isComputing = false;
-
+        gameStarted = true; gameEnded = false; isComputing = false;
         gameState = currentNode.state.clone();
         lastM     = currentNode.move || null;
         selIdx    = -1; valTgt = [];
-
         if (timeLimit > 0) {
             if (currentNode.state.timeW !== undefined) {
-                timeW = currentNode.state.timeW;
-                timeB = currentNode.state.timeB;
+                timeW = currentNode.state.timeW; timeB = currentNode.state.timeB;
             }
-            clockLastStamp = Date.now();
-            startClock();
+            clockLastStamp = Date.now(); startClock();
         }
-
         document.getElementById('modal').style.display = 'none';
-
-        render();
-        loop();
+        render(); loop();
     }
 
     function onSquareClick(idx) {
         if (!gameStarted||isComputing||gameEnded) return;
         const isCPU=(cfgMode===MODE_HVM&&gameState.turn===-1)||(cfgMode===MODE_MVH&&gameState.turn===1)||cfgMode===MODE_MVM;
         if (isCPU&&cfgMode!==MODE_SAND&&!isAnalysisOn) return;
-
         const m=valTgt.find(m=>m.to===idx);
         if (m) { exec(m); return; }
         if (gameState.board[idx]!==EMPTY&&Math.sign(gameState.board[idx])===gameState.turn) {
@@ -1349,9 +1917,7 @@
             render(); if (!gameEnded&&gameStarted) setTimeout(loop,50);
         } else if (currentNode.children.length>0) {
             pendingBranchMove=m; document.getElementById('branch-modal').style.display='flex';
-        } else {
-            addNodeAndApply(m);
-        }
+        } else { addNodeAndApply(m); }
     }
 
     function addNodeAndApply(m) {
@@ -1362,7 +1928,6 @@
         gameState=currentNode.state.clone();
         selIdx=-1; valTgt=[]; lastM=m;
         if (gameStarted&&timeLimit>0) clockLastStamp=Date.now();
-        // [FIX-1] Auto-start clock in HvH (or any mode) when moves are being played
         if (gameStarted&&!gameEnded&&timeLimit>0&&!clockInterval) startClock();
         render(); if (!gameEnded&&gameStarted) setTimeout(loop,50);
     }
@@ -1380,16 +1945,13 @@
         pendingBranchMove=null; selIdx=-1; valTgt=[]; render();
     };
 
-    // Time-travel / History navigation
     window.navToId = function(id) {
         if (isComputing) return;
         const n=allNodes[id]; if (!n) return;
-        stopClock();
-        gameStarted = false;
-        gameEnded   = false;
-        currentNode = n; gameState = n.state.clone();
-        lastM = n.move || null; selIdx = -1; valTgt = [];
-        txtStatus.innerText = "⏸ Paused — press ▶ to resume here";
+        stopClock(); gameStarted=false; gameEnded=false;
+        currentNode=n; gameState=n.state.clone();
+        lastM=n.move||null; selIdx=-1; valTgt=[];
+        txtStatus.innerText="⏸ Pausado — pressione ▶ para continuar";
         render();
     };
 
@@ -1401,7 +1963,6 @@
         if (e.key==='ArrowDown')  { e.preventDefault(); let c=currentNode; while(c.children.length>0) c=c.children[0]; navToId(c.id); }
     });
 
-    // ── Config handlers ──────────────────────────────────────────────────────
     document.getElementById('cfg-mode').onchange=e=>{
         cfgMode=parseInt(e.target.value);
         cfgView=(cfgMode===MODE_MVH)?'B':'W'; document.getElementById('cfg-view').value=cfgView;
@@ -1424,33 +1985,26 @@
 
     document.getElementById('btn-suggest').onclick=()=>{
         if (gameEnded||isComputing) return;
-
-        // ── [BOOK-4] INSTANT BOOK SUGGESTION ────────────────────────────────
         {
-            const legalMoves = gameState.getMoves();
-            const bookMove   = bookProbe(gameState, legalMoves);
+            const bookMove = bookProbe(gameState);
             if (bookMove) {
                 const pvStr = move2Str(bookMove);
                 txtAnalysis.innerHTML =
                     `Sugestão: <strong style="color:#66bb6a">${pvStr}</strong> | ` +
-                    `Eval:<strong style="color:#ffa726"> Book</strong> ` +
-                    `D:<strong>0</strong> T:<strong>0.0s</strong> ` +
-                    `<span style="color:#ffa726;">[Book]</span>`;
-                selIdx=bookMove.from; valTgt=[bookMove]; render();
-                return;
+                    `Eval:<strong style="color:#ffa726"> Livro</strong> P:<strong>0</strong> ` +
+                    `T:<strong>0.0s</strong> <span style="color:#ffa726;">[📖 Livro]</span>`;
+                selIdx=bookMove.from; valTgt=[bookMove]; render(); return;
             }
         }
-
-        // ── Book miss — full depth suggestion ───────────────────────────────
-        txtAnalysis.innerHTML=`<span style="color:#66bb6a;">Suggesting Depth ${cfgDepth}...</span>`;
+        txtAnalysis.innerHTML=`<span style="color:#66bb6a;">Sugerindo profundidade ${cfgDepth}...</span>`;
         const t0=Date.now();
         setTimeout(()=>{
             const res=getBestMove(gameState, cfgDepth, 0);
             const elapsed=((Date.now()-t0)/1000).toFixed(1);
             const sc=res.score;
             const scStr=sc>9000?'Mate':sc<-9000?'-Mate':(sc>=0?'+':'')+(sc/100).toFixed(2);
-            const bookTag=res.isBook?'<span style="color:#ffa726;"> [Book]</span>':'';
-            txtAnalysis.innerHTML=`Sugestão: <strong style="color:#66bb6a">${res.move?move2Str(res.move):'-'}</strong> | Eval:<strong style="color:${sc>=0?'#66bb6a':'#ef5350'}">${scStr}</strong> D:<strong>${res.depth}</strong> T:<strong>${elapsed}s</strong>${bookTag}`;
+            const bookTag=res.isBook?'<span style="color:#ffa726;"> [📖 Livro]</span>':'';
+            txtAnalysis.innerHTML=`Sugestão: <strong style="color:#66bb6a">${res.move?move2Str(res.move):'-'}</strong> | Eval:<strong style="color:${sc>=0?'#66bb6a':'#ef5350'}">${scStr}</strong> P:<strong>${res.depth}</strong> T:<strong>${elapsed}s</strong>${bookTag}`;
             if (res.move) { selIdx=res.move.from; valTgt=[res.move]; render(); }
         }, 10);
     };
@@ -1460,9 +2014,7 @@
     document.getElementById('btn-nav-next').onclick =()=>{ if(currentNode.children.length>0) navToId(currentNode.children[0].id); };
     document.getElementById('btn-nav-end').onclick  =()=>{ let c=currentNode; while(c.children.length>0) c=c.children[0]; navToId(c.id); };
 
-    // ════════════════════════════════════════════════════════════════════════
-    //  PDN EXPORT
-    // ════════════════════════════════════════════════════════════════════════
+    // ── Exportação PDN ────────────────────────────────────────────────────────
     function idxToNum(idx) {
         const r=idx>>3, c=idx&7;
         if ((r+c)%2!==0) return -1;
@@ -1498,28 +2050,26 @@
         return out;
     }
     document.getElementById('btn-export').onclick=async()=>{
-        const result=gameEnded?(gameState.turn===1?'0-1':'1-0'):'*';
-        let txt=`[Event "DraughtsMind Elite Match"]\n[GameType "21"]\n[Result "${result}"]\n`;
-        txt+=`{DraughtsMind v${ENGINE_VERSION} | depth:${cfgDepth} | time:${timeLimit} | hash:${gameState.hash().toString(16).toUpperCase()}}\n\n`;
+        const result=gameEnded?(gameState.turn===1?'0-2':'2-0'):'*';
+        let txt=`[Event "DraughtsMind Elite Match"]\n[GameType "26"]\n[Result "${result}"]\n`;
+        txt+=`{DraughtsMind v${ENGINE_VERSION} | depth:${cfgDepth} | time:${timeLimit} | hash:${(gameState.hash()>>>0).toString(16).toUpperCase()}}\n\n`;
         txt+=generatePDN(rootNode,0)+`\n${result}\n`;
         const name=`mind_game_${Date.now()}.pdn`;
         if (window.showSaveFilePicker) {
             try {
                 const h=await window.showSaveFilePicker({ suggestedName:name, types:[{description:'PDN',accept:{'text/plain':['.pdn']}}] });
                 const w=await h.createWritable(); await w.write(txt); await w.close();
-                txtAnalysis.innerHTML=`<span style="color:#66bb6a;">Exportado: ${name}</span>`; return;
+                txtAnalysis.innerHTML=`<span style="color:#66bb6a;">✓ Exportado: ${name}</span>`; return;
             } catch(e) { if(e.name==='AbortError') return; }
         }
         const blob=new Blob([txt],{type:'text/plain'}), url=URL.createObjectURL(blob);
         const a=document.createElement('a'); a.href=url; a.download=name; a.style.display='none';
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
         setTimeout(()=>URL.revokeObjectURL(url),5000);
-        txtAnalysis.innerHTML=`<span style="color:#66bb6a;">Download: ${name}</span>`;
+        txtAnalysis.innerHTML=`<span style="color:#66bb6a;">✓ Download: ${name}</span>`;
     };
 
-    // ════════════════════════════════════════════════════════════════════════
-    //  PDN IMPORT
-    // ════════════════════════════════════════════════════════════════════════
+    // ── Importação PDN ────────────────────────────────────────────────────────
     function tryMatchMove(state, tk) {
         const moves=state.getMoves();
         let found=moves.find(m=>move2Str(m).toLowerCase()===tk.toLowerCase());
@@ -1541,28 +2091,17 @@
     }
 
     function loadEBNF(str) {
-        // ── Bullet-proof PDN pre-processor (Aurora Borealis & all major formats)
-        // Step 1: % comment lines
         str = str.replace(/^%[^\r\n]*/gm, ' ');
-        // Step 2: PGN/PDN tag pairs [Key "Value"]
         str = str.replace(/^\[[^\]]*\][ \t]*/gm, ' ');
-        // Step 3: multi-line {…} block comments
         let prev;
         do { prev=str; str=str.replace(/\{[^{}]*\}/g,' '); } while (str!==prev);
-        // Step 4: Normalise all line-endings to spaces
         str = str.replace(/\r?\n/g, ' ');
-        // Step 5: NAG annotations ($0 … $255) and move quality glyphs (! ?)
         str = str.replace(/\$\d{1,3}/g, ' ').replace(/[?!]+/g, ' ');
-        // Step 6: Game result tokens
         str = str.replace(/\b(1\/2-1\/2|2-0|0-2|1-1|1-0|0-1)\b/g, ' ').replace(/\*/g,' ');
-        // Step 7: Move numbers — "1." "12." "12..." "12...."
         str = str.replace(/\d+\.+/g, ' ');
-        // Step 8: Space-pad variation delimiters
         str = str.replace(/\(/g, ' ( ').replace(/\)/g, ' ) ');
 
         const tokens = str.split(/\s+/).filter(t => t.length > 0);
-
-        // ── Build game tree ───────────────────────────────────────────────────
         const ns = new State(); ns.timeW = timeLimit; ns.timeB = timeLimit;
         rootNode    = { id:0, parent:null, moveStr:null, state:ns, children:[] };
         nextNodeId  = 1; allNodes = { 0: rootNode };
@@ -1570,8 +2109,7 @@
 
         for (const tk of tokens) {
             if (tk === '(') {
-                stack.push(curr);
-                curr = curr.parent || rootNode;
+                stack.push(curr); curr = curr.parent || rootNode;
             } else if (tk === ')') {
                 if (stack.length > 0) curr = stack.pop();
             } else {
@@ -1591,7 +2129,6 @@
             }
         }
 
-        // ── Reset UI to initial imported position ─────────────────────────────
         currentNode = rootNode; gameState = currentNode.state.clone();
         timeW = timeLimit; timeB = timeLimit;
         gameStarted = false; gameEnded = false; isComputing = false;
@@ -1600,18 +2137,16 @@
         document.getElementById('modal').style.display = 'none';
         render();
 
-        // ── Feedback ──────────────────────────────────────────────────────────
         if (skipped.length > 0) {
             const uniq = [...new Set(skipped)];
             const safe = uniq.slice(0,6)
-                .map(t => t.replace(/&/g,'&amp;').replace(/</g,'&lt;')
-                           .replace(/>/g,'&gt;').replace(/"/g,'&quot;'))
+                .map(t => t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'))
                 .join(', ');
             txtAnalysis.innerHTML =
                 `<span style="color:#ffa726;">Importado com ${skipped.length} token(s) desconhecido(s): ${safe}${uniq.length>6?'…':''}</span>`;
         } else {
             txtAnalysis.innerHTML =
-                `<span style="color:#66bb6a;">✓ Import concluído. ${Object.keys(allNodes).length-1} lances / variações carregados.</span>`;
+                `<span style="color:#66bb6a;">✓ Importação concluída. ${Object.keys(allNodes).length-1} lance(s)/variação(ões) carregados.</span>`;
         }
     }
 
@@ -1621,12 +2156,13 @@
     };
     document.getElementById('btn-apply-paste').onclick=()=>loadEBNF(document.getElementById('paste-area').value);
 
-    // ════════════════════════════════════════════════════════════════════════
-    //  INIT
-    // ════════════════════════════════════════════════════════════════════════
+    // ── Inicialização ─────────────────────────────────────────────────────────
     buildOpeningBook();
     initDOM();
     resetBoard();
+
+    // Log de diagnóstico
+    console.log(`DraughtsMind v${ENGINE_VERSION} | Livro: ${bookMap.size} posições únicas | TT: ${TT_SIZE} entradas`);
 </script>
 </body>
 </html>

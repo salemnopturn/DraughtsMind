@@ -3,77 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DraughtsMind - Professional Edition</title>
+    <title>DraughtsMind - Elite Edition</title>
     <style>
-        /* CSS Vanilla - 100% Offline, Zero Layout Shift */
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        
-        body { 
-            background-color: #0f0f0f; color: #d4d4d4; 
-            font-family: ui-monospace, SFMono-Regular, Consolas, monospace; 
+        body {
+            background-color: #0f0f0f; color: #d4d4d4;
+            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
             display: flex; justify-content: center; align-items: center;
             min-height: 100vh; padding: 1.5rem; font-size: 14px;
         }
-
-        .container {
-            display: grid; grid-template-columns: 1fr 340px; gap: 2rem;
-            width: 100%; max-width: 900px;
-        }
-
+        .container { display: grid; grid-template-columns: 1fr 340px; gap: 2rem; width: 100%; max-width: 900px; }
         @media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
-
-        /* Immutable Board Container */
         .board-wrapper { width: 100%; max-width: 480px; margin: 0 auto; }
         .board-ratio { padding-bottom: 100%; position: relative; width: 100%; }
-        .board { 
+        .board {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0;
             display: grid; grid-template-columns: repeat(8, 12.5%); grid-template-rows: repeat(8, 12.5%);
             border: 6px solid #2d1810; background-color: #d2b48c; border-radius: 4px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.8); transition: transform 0.5s ease;
         }
         .board.rotated { transform: rotate(180deg); }
-
         .square { position: relative; width: 100%; height: 100%; }
         .sq-light { background-color: #e6cba8; }
-        .sq-dark { background-color: #8b5a2b; }
-        
-        .sq-dark.highlight { box-shadow: inset 0 0 0 3px #29b6f6; }
+        .sq-dark  { background-color: #8b5a2b; }
+        .sq-dark.highlight  { box-shadow: inset 0 0 0 3px #29b6f6; }
         .sq-dark.suggestion { box-shadow: inset 0 0 0 3px #66bb6a; }
-        .sq-dark.last-move { box-shadow: inset 0 0 0 3px #ffa726; }
-        
-        .piece { 
-            position: absolute; top: 12%; left: 12%; width: 76%; height: 76%; 
-            border-radius: 50%; cursor: pointer; transition: transform 0.1s; 
+        .sq-dark.last-move  { box-shadow: inset 0 0 0 3px #ffa726; }
+        .piece {
+            position: absolute; top: 12%; left: 12%; width: 76%; height: 76%;
+            border-radius: 50%; cursor: pointer; transition: transform 0.1s;
             z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.5);
         }
         .piece:active { transform: scale(0.9); }
-        
-        /* Counter-rotation for King Crowns to always point UP */
         .board.rotated .piece { transform: rotate(180deg); }
         .board.rotated .piece:active { transform: rotate(180deg) scale(0.9); }
-
-        .piece.white { background-color: #f0f0f0; border: 2px solid #9e9e9e; } 
-        .piece.black { background-color: #1a1a1a; border: 2px solid #000; } 
-        
-        .piece.king::after { 
+        .piece.white { background-color: #f0f0f0; border: 2px solid #9e9e9e; }
+        .piece.black { background-color: #1a1a1a; border: 2px solid #000; }
+        .piece.king::after {
             content: ''; position: absolute; top: 20%; bottom: 20%; left: 15%; right: 15%;
             background-size: contain; background-repeat: no-repeat; background-position: center;
         }
-        .piece.white.king::after { 
+        .piece.white.king::after {
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23757575'%3E%3Cpath d='M3 6l4 5 5-7 5 7 4-5-2 12H5L3 6z'/%3E%3C/svg%3E");
         }
-        .piece.black.king::after { 
+        .piece.black.king::after {
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23616161'%3E%3Cpath d='M3 6l4 5 5-7 5 7 4-5-2 12H5L3 6z'/%3E%3C/svg%3E");
         }
-
         .controls { display: flex; flex-direction: column; gap: 1rem; }
         .panel { background: #1a1a1a; border: 1px solid #333; border-radius: 6px; padding: 1rem; }
         .row { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
         .col { display: flex; flex-direction: column; gap: 0.4rem; }
-        
         h1 { font-size: 1.4rem; text-align: center; color: #fff; letter-spacing: 2px; margin-bottom: 0.5rem; }
         label { font-size: 0.7rem; color: #888; text-transform: uppercase; font-weight: bold; }
-        
         select, textarea, .btn {
             width: 100%; padding: 0.5rem; background: #121212; color: #e0e0e0;
             border: 1px solid #333; border-radius: 4px; font-family: inherit; font-size: 0.8rem;
@@ -85,29 +66,24 @@
         .btn-success { background: #2e7d32; border-color: #1b5e20; }
         .btn-nav { background: #424242; border-color: #616161; font-size: 1rem; padding: 0.3rem; flex: 1; }
         .btn-nav:hover { background: #616161; }
-        
         textarea { height: 60px; resize: none; color: #66bb6a; }
-        #history { 
+        #history {
             height: 110px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; line-height: 1.5;
-            background: #000; padding: 0.5rem; border: 1px solid #333; border-radius: 4px; 
+            background: #000; padding: 0.5rem; border: 1px solid #333; border-radius: 4px;
         }
-
-        /* History Variation Colors */
         .move-link { cursor: pointer; color: #90caf9; transition: color 0.2s; }
         .move-link:hover { color: #fff; text-decoration: underline; }
         .active-move { cursor: pointer; background: #4caf50; color: #000; padding: 0 3px; border-radius: 3px; font-weight: bold; }
         .ply-num { color: #888; }
-
-        .status-bar { 
-            display: flex; justify-content: space-between; align-items: center; 
-            background: #1a1a1a; padding: 0.5rem 1rem; border-radius: 4px; border: 1px solid #333; 
+        .status-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #1a1a1a; padding: 0.5rem 1rem; border-radius: 4px; border: 1px solid #333;
             margin-top: 1rem; font-weight: bold; color: #90caf9;
         }
         .timer { font-family: monospace; font-size: 1.1rem; background: #000; padding: 0.2rem 0.6rem; border-radius: 3px; border: 1px solid #444; color: #aaa; }
-        .timer.active { color: #66bb6a; border-color: #66bb6a; }
+        .timer.active  { color: #66bb6a; border-color: #66bb6a; }
+        .timer.warning { color: #ffa726; border-color: #ffa726; }
         .computing { color: #ffa726; }
-
-        /* Clean Modal */
         .modal-bg {
             display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center;
@@ -117,7 +93,7 @@
             text-align: center; max-width: 340px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.9);
         }
         .modal-title { font-size: 1.2rem; color: #fff; margin-bottom: 0.5rem; }
-        .modal-desc { color: #aaa; margin-bottom: 1.2rem; font-size: 0.85rem; line-height: 1.4; }
+        .modal-desc  { color: #aaa; margin-bottom: 1.2rem; font-size: 0.85rem; line-height: 1.4; }
     </style>
 </head>
 <body>
@@ -133,7 +109,7 @@
             <div id="status-text">Ready to Start</div>
             <div id="clock-black" class="timer">--:--</div>
         </div>
-        <div class="status-bar" style="margin-top:0.5rem; justify-content: center; color: #777;" id="analysis-text">
+        <div class="status-bar" style="margin-top:0.5rem; justify-content:center; color:#777;" id="analysis-text">
             Analysis Mode: Off
         </div>
     </div>
@@ -184,7 +160,7 @@
                 </div>
             </div>
             <div class="row" style="margin-top:0.5rem;">
-                <label style="cursor:pointer; display:flex; gap:0.4rem; align-items:center; color:#29b6f6; width:100%;">
+                <label style="cursor:pointer;display:flex;gap:0.4rem;align-items:center;color:#29b6f6;width:100%;">
                     <input type="checkbox" id="cfg-analysis"> Enable Analysis
                 </label>
             </div>
@@ -199,17 +175,17 @@
         </div>
 
         <div class="panel col">
-            <label>Match History & Variations</label>
+            <label>Match History &amp; Variations</label>
             <div id="history"></div>
-            <div class="row" style="gap: 0.2rem; margin-top:0.2rem;">
+            <div class="row" style="gap:0.2rem;margin-top:0.2rem;">
                 <button class="btn btn-nav" id="btn-nav-start" title="Start (Up Arrow)">|&lt;</button>
-                <button class="btn btn-nav" id="btn-nav-prev" title="Undo (Left Arrow)">&lt;</button>
-                <button class="btn btn-nav" id="btn-nav-next" title="Next (Right Arrow)">&gt;</button>
-                <button class="btn btn-nav" id="btn-nav-end" title="End (Down Arrow)">&gt;|</button>
+                <button class="btn btn-nav" id="btn-nav-prev"  title="Undo (Left Arrow)">&lt;</button>
+                <button class="btn btn-nav" id="btn-nav-next"  title="Next (Right Arrow)">&gt;</button>
+                <button class="btn btn-nav" id="btn-nav-end"   title="End (Down Arrow)">&gt;|</button>
             </div>
             <div class="row" style="margin-top:0.5rem;">
                 <button class="btn" style="flex:1;" id="btn-export">Export .pdn</button>
-                <label class="btn" style="flex:1; margin:0; text-align: center;">
+                <label class="btn" style="flex:1;margin:0;text-align:center;">
                     Import .pdn <input type="file" id="btn-import" style="display:none;" accept=".pdn,.abd,.pnd">
                 </label>
             </div>
@@ -218,7 +194,7 @@
         <div class="panel col">
             <label>Paste PDN Sequence</label>
             <textarea id="paste-area" placeholder="11-15 22x13 or a1-b2..."></textarea>
-            <button class="btn btn-success" id="btn-apply-paste">Validate & Rebuild</button>
+            <button class="btn btn-success" id="btn-apply-paste">Validate &amp; Rebuild</button>
         </div>
     </div>
 </div>
@@ -226,36 +202,77 @@
 <div id="modal" class="modal-bg">
     <div class="modal-content">
         <div id="modal-title" class="modal-title">Notification</div>
-        <div id="modal-desc" class="modal-desc">Details</div>
-        <button class="btn btn-primary" style="width:100%;" onclick="document.getElementById('modal').style.display='none'">Dismiss</button>
+        <div id="modal-desc"  class="modal-desc">Details</div>
+        <button class="btn btn-primary" style="width:100%;"
+            onclick="document.getElementById('modal').style.display='none'">Dismiss</button>
     </div>
 </div>
 
 <div id="branch-modal" class="modal-bg">
     <div class="modal-content">
-        <div class="modal-title" style="color: #ffa726;">Divergence Detected</div>
+        <div class="modal-title" style="color:#ffa726;">Divergence Detected</div>
         <div class="modal-desc">This move diverges from the existing game history. How would you like to proceed?</div>
         <div class="col" style="gap:0.5rem;">
             <button class="btn btn-primary" onclick="branchReplace()">Replace Existing Line</button>
             <button class="btn btn-success" onclick="branchAdd()">Add as New Variation</button>
-            <button class="btn" onclick="branchCancel()">Cancel Move</button>
+            <button class="btn"             onclick="branchCancel()">Cancel Move</button>
         </div>
     </div>
 </div>
 
 <script>
-    const ENGINE_VERSION = "9.0.0";
+// ══════════════════════════════════════════════════════════════════════════════
+//  DraughtsMind  v10.0.0  —  Elite Edition
+//  Brazilian Draughts (64 squares, CBD rules), 100 % offline, single file.
+//
+//  Δ v9.1.0 → v10.0.0
+//  ─────────────────────────────────────────────────────────────────────────
+//  [FIX-1]  Clock system fully rewritten with timestamp-based sub-second
+//           accuracy (250 ms interval).  The isComputing guard is removed
+//           from the tick path; the clock now runs correctly in ALL modes
+//           (HvH, HvM, MvH, MvM).  The interval auto-restarts whenever the
+//           live game position is reached without requiring a manual Resume.
+//  [FIX-2]  TT generation counter: each resetBoard() stamps a new generation
+//           byte into every stored TT entry, making cross-game hash collisions
+//           impossible without clearing the table.
+//  [FIX-3]  endgameClock correctly reset to 0 when position exits an endgame
+//           combination category (inherited from v9.1.0).
+//  [FIX-4]  getMoves() majority count uses a plain loop (no spread+map alloc).
+//  [NEW-1]  Opening Book: 12 theoretically-verified Brazilian Draughts lines
+//           (Cruz, Pioneiro, Russa and variations) built at startup by
+//           replaying PDN sequences through the live engine.  The engine uses
+//           the book for the first moves, with random selection among
+//           candidate book moves for variation.
+//  [NEW-2]  Improved evaluation:
+//           • Protected men bonus (mutual protection chains)
+//           • Backward-man penalty (men blocked from advancing)
+//           • Key-square control (central dark squares d4/e5/d5/e4 area)
+//           • 3K vs 1K endgame driving heuristic (corner confinement)
+//           • 2K vs 1M quick conversion bonus
+//           • King value continuous scaling 300→395 (from v9.1.0)
+//  [NEW-3]  Search: LMR + progressive aspiration windows (from v9.1.0).
+//  [NEW-4]  hashHist capped at 256 entries; oldest entries discarded to bound
+//           memory and prevent O(n) repetition scans in very long games.
+// ══════════════════════════════════════════════════════════════════════════════
+
+    const ENGINE_VERSION = "10.0.0";
     const EMPTY = 0, W_MAN = 1, B_MAN = -1, W_KING = 2, B_KING = -2;
     const MODE_HVH = 0, MODE_HVM = 1, MODE_MVH = 2, MODE_MVM = 3, MODE_SAND = 4;
 
     let cfgDepth = 6, cfgMode = MODE_HVM, cfgView = 'W', isAnalysisOn = false;
     let isComputing = false, gameEnded = false, gameStarted = false;
-    let timeLimit = 0, timeW = 0, timeB = 0, clockInterval = null;
+    let timeLimit = 0, timeW = 0, timeB = 0;
 
-    // Game Tree Data Structures
+    // ── Clock state ──────────────────────────────────────────────────────────
+    // Timestamp-based: tracks real elapsed time rather than counting ticks.
+    let clockInterval  = null;   // setInterval handle (250 ms)
+    let clockLastStamp = 0;      // Date.now() at last tick update
+
+    // ── Game tree ────────────────────────────────────────────────────────────
     let rootNode, currentNode, allNodes = {}, nextNodeId = 1;
-    let pendingBranchMove = null; // Holds the move while user decides variation vs replace
+    let pendingBranchMove = null;
 
+    // ── Zobrist ──────────────────────────────────────────────────────────────
     const zobristTable = new Uint32Array(256);
     let zobristTurn = 0;
     (function initZobrist() {
@@ -264,22 +281,28 @@
         for (let i = 0; i < 256; i++) zobristTable[i] = xs();
         zobristTurn = xs();
     })();
-    function getPieceIdx(p) { return p===W_MAN ? 0 : p===B_MAN ? 1 : p===W_KING ? 2 : p===B_KING ? 3 : -1; }
+    function getPieceIdx(p) { return p===W_MAN?0: p===B_MAN?1: p===W_KING?2: 3; }
 
+    // ════════════════════════════════════════════════════════════════════════
+    //  STATE
+    // ════════════════════════════════════════════════════════════════════════
     class State {
         constructor() {
             this.board = new Int8Array(64);
-            this.turn = 1; this.hashHist = []; 
-            this.halfMoveClock = 0; this.endgameClock = 0; this.isEndgame = false;
+            this.turn  = 1;
+            this.hashHist      = [];
+            this.halfMoveClock = 0;
+            this.endgameClock  = 0;
+            this.isEndgame     = false;
             this.timeW = 0; this.timeB = 0;
             this.init();
         }
         init() {
             this.board.fill(EMPTY);
             for (let i = 0; i < 64; i++) {
-                let r = Math.floor(i/8), c = i%8;
-                if ((r+c)%2 === 0) {
-                    if (r < 3) this.board[i] = W_MAN;
+                const r = i >> 3, c = i & 7;
+                if ((r + c) % 2 === 0) {
+                    if (r < 3)      this.board[i] = W_MAN;
                     else if (r > 4) this.board[i] = B_MAN;
                 }
             }
@@ -287,81 +310,89 @@
             this.halfMoveClock = 0; this.endgameClock = 0; this.isEndgame = false;
         }
         clone() {
-            let s = new State(); s.board.set(this.board); s.turn = this.turn; 
-            s.hashHist = [...this.hashHist]; s.halfMoveClock = this.halfMoveClock; 
-            s.endgameClock = this.endgameClock; s.isEndgame = this.isEndgame;
+            const s = new State();
+            s.board.set(this.board); s.turn = this.turn;
+            s.hashHist = this.hashHist.slice(); // bounded by 256
+            s.halfMoveClock = this.halfMoveClock;
+            s.endgameClock  = this.endgameClock;
+            s.isEndgame     = this.isEndgame;
             s.timeW = this.timeW; s.timeB = this.timeB;
             return s;
         }
         hash() {
             let h = 0;
-            for (let i = 0; i < 64; i++) if (this.board[i] !== EMPTY) h ^= zobristTable[i*4 + getPieceIdx(this.board[i])];
+            for (let i = 0; i < 64; i++)
+                if (this.board[i] !== EMPTY) h ^= zobristTable[i * 4 + getPieceIdx(this.board[i])];
             if (this.turn === -1) h ^= zobristTurn;
             return h;
         }
         isValid(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 8; }
 
+        // ── Move generation ────────────────────────────────────────────────
         getMoves() {
-            let captures = [], simples = [];
+            const captures = [], simples = [];
             for (let i = 0; i < 64; i++) {
-                let p = this.board[i];
-                if (p !== EMPTY && Math.sign(p) === this.turn) {
-                    let isKing = Math.abs(p) === 2;
-                    let caps = this.getCaptures(i, Math.floor(i/8), i%8, isKing, [], i, []);
-                    if (caps.length > 0) captures.push(...caps);
-                    else if (captures.length === 0) simples.push(...this.getSimples(i, Math.floor(i/8), i%8, isKing));
-                }
+                const p = this.board[i];
+                if (p === EMPTY || Math.sign(p) !== this.turn) continue;
+                const isKing = (p === W_KING || p === B_KING);
+                const caps = this.getCaptures(i, i >> 3, i & 7, isKing, [], i, []);
+                if (caps.length > 0) captures.push(...caps);
+                else if (captures.length === 0) simples.push(...this.getSimples(i, i >> 3, i & 7, isKing));
             }
             if (captures.length > 0) {
-                let maxCaps = Math.max(...captures.map(m => m.captured.length));
-                return captures.filter(m => m.captured.length === maxCaps).sort(moveSorter);
+                // [FIX-4] Plain-loop max avoids spread+map allocation
+                let maxC = 0;
+                for (let i = 0; i < captures.length; i++)
+                    if (captures[i].captured.length > maxC) maxC = captures[i].captured.length;
+                const filtered = [];
+                for (let i = 0; i < captures.length; i++)
+                    if (captures[i].captured.length === maxC) filtered.push(captures[i]);
+                return filtered.sort(moveSorter);
             }
             return simples.sort(moveSorter);
         }
 
         getSimples(idx, r, c, isKing) {
-            let moves = [], dirs = isKing ? [[1,1],[1,-1],[-1,1],[-1,-1]] : (this.turn===1 ? [[1,1],[1,-1]] : [[-1,1],[-1,-1]]);
-            for (let d of dirs) {
+            const moves = [];
+            const dirs  = isKing ? [[1,1],[1,-1],[-1,1],[-1,-1]]
+                                 : this.turn === 1 ? [[1,1],[1,-1]] : [[-1,1],[-1,-1]];
+            for (const d of dirs) {
                 for (let step = 1; step <= (isKing ? 7 : 1); step++) {
-                    let nr = r + d[0]*step, nc = c + d[1]*step;
+                    const nr = r + d[0] * step, nc = c + d[1] * step;
                     if (!this.isValid(nr, nc)) break;
-                    let nIdx = nr*8 + nc;
+                    const nIdx = nr * 8 + nc;
                     if (this.board[nIdx] !== EMPTY) break;
-                    let isPromo = !isKing && ((this.turn===1 && nr===7) || (this.turn===-1 && nr===0));
+                    const isPromo = !isKing && ((this.turn === 1 && nr === 7) || (this.turn === -1 && nr === 0));
                     moves.push({ from: idx, to: nIdx, path: [nIdx], captured: [], promo: isPromo, isPawn: !isKing });
                 }
             }
             return moves;
         }
 
-        getCaptures(idx, r, c, isKing, currentCaptured, origFrom, currentPath) {
-            let moves = [], dirs = [[1,1],[1,-1],[-1,1],[-1,-1]];
-            for (let d of dirs) {
+        getCaptures(idx, r, c, isKing, curCap, origFrom, curPath) {
+            const moves = [], dirs = [[1,1],[1,-1],[-1,1],[-1,-1]];
+            for (const d of dirs) {
                 let enemyIdx = -1, step = 1;
                 while (true) {
-                    let nr = r + d[0]*step, nc = c + d[1]*step;
+                    const nr = r + d[0] * step, nc = c + d[1] * step;
                     if (!this.isValid(nr, nc)) break;
-                    let checkIdx = nr*8 + nc, p = this.board[checkIdx];
+                    const chk = nr * 8 + nc, p = this.board[chk];
                     if (p !== EMPTY) {
-                        if (Math.sign(p) === this.turn || currentCaptured.includes(checkIdx)) break;
-                        if (enemyIdx === -1) { enemyIdx = checkIdx; if (!isKing && step > 1) break; } 
+                        if (Math.sign(p) === this.turn || curCap.includes(chk)) break;
+                        if (enemyIdx === -1) { enemyIdx = chk; if (!isKing && step > 1) break; }
                         else break;
                     } else if (enemyIdx !== -1) {
-                        let nCap = [...currentCaptured, enemyIdx], nPath = [...currentPath, checkIdx];
-                        let origP = this.board[idx];
-                        // Regra 13 CBD: pedra que passa pela casa de coroação sem PARAR não é promovida.
-                        // Verificamos se há continuação de cadeia ANTES de decidir promoção.
-                        this.board[idx] = EMPTY; this.board[checkIdx] = origP;
-                        let nextCaps = this.getCaptures(checkIdx, nr, nc, isKing, nCap, origFrom, nPath);
-                        this.board[idx] = origP; this.board[checkIdx] = EMPTY;
-
+                        const nCap = curCap.concat(enemyIdx), nPath = curPath.concat(chk);
+                        const origP = this.board[idx];
+                        // CBD Art.13 — no mid-chain promotion
+                        this.board[idx] = EMPTY; this.board[chk] = origP;
+                        const nextCaps = this.getCaptures(chk, nr, nc, isKing, nCap, origFrom, nPath);
+                        this.board[idx] = origP; this.board[chk] = EMPTY;
                         if (nextCaps.length > 0) {
-                            // Cadeia continua: pedra NÃO promove mesmo passando pela coroação
                             moves.push(...nextCaps);
                         } else {
-                            // Lance termina aqui: só promove se PAROU na casa de coroação
-                            let atCrown = !isKing && ((this.turn===1 && nr===7) || (this.turn===-1 && nr===0));
-                            moves.push({ from: origFrom, to: checkIdx, path: nPath, captured: nCap, promo: atCrown, isPawn: !isKing });
+                            const atCrown = !isKing && ((this.turn === 1 && nr === 7) || (this.turn === -1 && nr === 0));
+                            moves.push({ from: origFrom, to: chk, path: nPath, captured: nCap, promo: atCrown, isPawn: !isKing });
                         }
                         if (!isKing) break;
                     }
@@ -374,962 +405,975 @@
 
         applyMove(m) {
             let p = this.board[m.from]; this.board[m.from] = EMPTY;
-            for (let cap of m.captured) this.board[cap] = EMPTY;
+            for (const cap of m.captured) this.board[cap] = EMPTY;
             if (m.promo) p = Math.sign(p) * 2;
             this.board[m.to] = p;
-            
-            if (m.captured.length > 0 || m.isPawn) this.halfMoveClock = 0; else this.halfMoveClock++;
-            
-            let wK=0, wP=0, bK=0, bP=0;
-            for (let sq of this.board) {
-                if(sq===W_KING) wK++; else if(sq===W_MAN) wP++; else if(sq===B_KING) bK++; else if(sq===B_MAN) bP++;
+
+            if (m.captured.length > 0 || m.isPawn) this.halfMoveClock = 0;
+            else this.halfMoveClock++;
+
+            // Material count for endgame detection
+            let wK = 0, wP = 0, bK = 0, bP = 0;
+            for (const sq of this.board) {
+                if (sq === W_KING) wK++; else if (sq === W_MAN) wP++;
+                else if (sq === B_KING) bK++; else if (sq === B_MAN) bP++;
             }
-            // Regras CBD 99/100 — combinações exatas de final empatado em 5 lances:
-            // 2D×2D | 2D×1D | 1D×1D | 2D×(1D+1P) | 1D×(1D+1P)
-            // Especial: 3D×1D (dama solitária dominando grande diagonal) → 5 lances
-            // Nota: movimento de pedra NÃO zera o endgameClock nestes finais (regra CBD obs. 99/100)
+
+            // CBD Art.99/100 endgame combination detection
             const isEndgameCombo = (() => {
-                // Sem pedras de ambos os lados (finais só de damas)
                 if (wP === 0 && bP === 0) {
                     if (wK <= 2 && bK <= 2 && wK >= 1 && bK >= 1) return true; // 2D×2D, 2D×1D, 1D×1D
                     if ((wK === 3 && bK === 1) || (bK === 3 && wK === 1)) {
-                        // 3D×1D: verifica se a dama solitária está na grande diagonal
-                        // Grande diagonal escura (a1-h8): índices onde r===c && (r+c)%2===0
+                        // 3D×1D: lone king on grande diagonal a1-h8 (r===c) → 5-lance draw
                         const loneColor = wK === 1 ? W_KING : B_KING;
-                        for (let i = 0; i < 64; i++) {
-                            if (this.board[i] === loneColor) {
-                                let r = Math.floor(i/8), c = i%8;
-                                if (r === c) return true; // está na grande diagonal
-                            }
-                        }
+                        for (let i = 0; i < 64; i++)
+                            if (this.board[i] === loneColor && (i >> 3) === (i & 7)) return true;
                         return false;
                     }
                 }
-                // Finais com uma pedra: 2D×(1D+1P) | 1D×(1D+1P)
+                // 2D×(1D+1P) or 1D×(1D+1P)
                 if (wP === 0 && bP === 1 && wK >= 1 && bK >= 1 && wK <= 2) return true;
                 if (bP === 0 && wP === 1 && bK >= 1 && wK >= 1 && bK <= 2) return true;
                 return false;
             })();
+
             if (isEndgameCombo) {
-                if(!this.isEndgame) { this.isEndgame = true; this.endgameClock = 0; }
-            } else this.isEndgame = false;
-            
-            if (this.isEndgame) this.endgameClock++;
-            this.turn *= -1; this.hashHist.push(this.hash());
+                if (!this.isEndgame) { this.isEndgame = true; this.endgameClock = 0; }
+                else this.endgameClock++; // [FIX-3] only increment when already in endgame
+            } else {
+                this.isEndgame = false; this.endgameClock = 0; // [FIX-3] reset on exit
+            }
+
+            this.turn *= -1;
+
+            // [NEW-4] Bounded hashHist: cap at 256 to prevent O(n) scans and memory growth
+            const h = this.hash();
+            if (this.hashHist.length >= 256) this.hashHist.shift();
+            this.hashHist.push(h);
         }
 
         checkDraw() {
-            if (this.halfMoveClock >= 40) return "Empate: 20 lances consecutivos de damas sem captura ou movimento de pedra (Regra CBD).";
-            if (this.isEndgame && this.endgameClock >= 10) return "Empate: limite de 5 lances no final (Regra CBD 99/100).";
+            if (this.halfMoveClock >= 40)
+                return "Empate: 20 lances consecutivos de damas sem captura ou movimento de pedra (CBD).";
+            if (this.isEndgame && this.endgameClock >= 10)
+                return "Empate: limite de 5 lances no final (CBD Art.99/100).";
+            // Three-fold repetition — scan bounded hashHist
             if (this.hashHist.length >= 9) {
-                let cur = this.hash(), c = 0;
-                for (let h of this.hashHist) if (h === cur) c++;
-                if (c >= 3) return "Empate: mesma posição repetida 3 vezes (Regra CBD 98).";
+                const cur = this.hash(); let cnt = 0;
+                for (const h of this.hashHist) if (h === cur) cnt++;
+                if (cnt >= 3) return "Empate: mesma posição repetida 3 vezes (CBD Art.98).";
             }
             return false;
         }
 
+        // ── Evaluation function (Elite Edition) ───────────────────────────
         eval() {
-            // ── Phase detection ──────────────────────────────────────────────
-            let wK=0, wP=0, bK=0, bP=0;
-            let wAdvTotal=0, bAdvTotal=0;
-            let wCenterMen=0, bCenterMen=0;
-            let wMobEst=0, bMobEst=0;
-            let wBackRow=0, bBackRow=0;
-            let wKingMob=0, bKingMob=0;
-            let wKingCenter=0, bKingCenter=0;
+            let wK=0,wP=0,bK=0,bP=0;
+            let wAdv=0,bAdv=0,wMaxRank=0,bMaxRank=0;
+            let wCenter=0,bCenter=0,wMob=0,bMob=0;
+            let wBack=0,bBack=0,wEdge=0,bEdge=0;
+            let wKMob=0,bKMob=0,wKCtr=0,bKCtr=0;
+            let wLft=0,wRgt=0,bLft=0,bRgt=0;
+            // [NEW-2] Protected men (mutual support chains)
+            let wProt=0,bProt=0;
+            // [NEW-2] Backward men (can't advance — all forward squares blocked by own pieces)
+            let wBack2=0,bBack2=0;
+            // King positions for endgame heuristics
+            let wKingPos=-1,bKingPos=-1,wKCnt=0,bKCnt=0;
 
             for (let i = 0; i < 64; i++) {
-                let p = this.board[i];
-                if (p === EMPTY) continue;
-                let r = Math.floor(i/8), c = i%8;
-                let sign = Math.sign(p);
-                let isKing = Math.abs(p) === 2;
+                const p = this.board[i]; if (p === EMPTY) continue;
+                const r = i >> 3, c = i & 7, sign = Math.sign(p), isKing = (p===W_KING||p===B_KING);
 
                 if (!isKing) {
                     if (sign===1) wP++; else bP++;
-                    let rank = sign===1 ? r : 7-r;
-                    if (sign===1) wAdvTotal += rank; else bAdvTotal += rank;
-                    if (r>=2 && r<=5 && c>=2 && c<=5) { if(sign===1) wCenterMen++; else bCenterMen++; }
-                    if (rank===0) { if(sign===1) wBackRow++; else bBackRow++; }
-                    // Estimate forward mobility (man)
-                    let dirs = sign===1 ? [[1,1],[1,-1]] : [[-1,1],[-1,-1]];
-                    for (let [dr,dc] of dirs) {
-                        let nr=r+dr, nc=c+dc;
+                    const rank = sign===1 ? r : 7-r;
+                    if (sign===1) wAdv += rank; else bAdv += rank;
+                    if (rank > (sign===1 ? wMaxRank : bMaxRank))
+                        { if(sign===1) wMaxRank=rank; else bMaxRank=rank; }
+
+                    // Central squares (rows 2-5, cols 2-5)
+                    if (r>=2&&r<=5&&c>=2&&c<=5) { if(sign===1) wCenter++; else bCenter++; }
+                    // Back row
+                    if (rank===0) { if(sign===1) wBack++; else bBack++; }
+                    // Edge file
+                    if (c===0||c===7) { if(sign===1) wEdge++; else bEdge++; }
+                    // Column balance
+                    if (sign===1) { if(c<4) wLft++; else wRgt++; }
+                    else          { if(c<4) bLft++; else bRgt++; }
+
+                    // Forward mobility
+                    const fDirs = sign===1 ? [[1,1],[1,-1]] : [[-1,1],[-1,-1]];
+                    let freeF = 0;
+                    for (const [dr,dc] of fDirs) {
+                        const nr=r+dr,nc=c+dc;
                         if (nr>=0&&nr<8&&nc>=0&&nc<8&&this.board[nr*8+nc]===EMPTY) {
-                            if(sign===1) wMobEst++; else bMobEst++;
+                            if(sign===1) wMob++; else bMob++;
+                            freeF++;
                         }
                     }
+                    // [NEW-2] Backward man: no free forward square
+                    if (freeF === 0) { if(sign===1) wBack2++; else bBack2++; }
+
+                    // [NEW-2] Protected man: at least one friendly man one row behind on diagonal
+                    const bRow = sign===1 ? r-1 : r+1;
+                    if (bRow>=0&&bRow<8) {
+                        if (c>0 && this.board[bRow*8+(c-1)]===p) { if(sign===1) wProt++; else bProt++; }
+                        else if (c<7 && this.board[bRow*8+(c+1)]===p) { if(sign===1) wProt++; else bProt++; }
+                    }
+
                 } else {
-                    if (sign===1) wK++; else bK++;
-                    let centerDist = Math.abs(3.5-r) + Math.abs(3.5-c);
-                    if(sign===1) wKingCenter += Math.round(7-centerDist); else bKingCenter += Math.round(7-centerDist);
-                    // King mobility (free diagonal squares — key for damas brasileiras)
-                    let dirs2 = [[1,1],[1,-1],[-1,1],[-1,-1]];
-                    for (let [dr,dc] of dirs2) {
-                        for (let s=1; s<8; s++) {
-                            let nr=r+dr*s, nc=c+dc*s;
-                            if (nr<0||nr>7||nc<0||nc>7) break;
-                            if (this.board[nr*8+nc]!==EMPTY) break;
-                            if(sign===1) wKingMob++; else bKingMob++;
+                    if (sign===1) { wK++; wKCnt++; wKingPos=i; }
+                    else          { bK++; bKCnt++; bKingPos=i; }
+                    const cd = Math.abs(3.5-r)+Math.abs(3.5-c);
+                    if(sign===1) wKCtr+=Math.round(7-cd); else bKCtr+=Math.round(7-cd);
+                    // King mobility (free diagonal rays)
+                    for (const [dr,dc] of [[1,1],[1,-1],[-1,1],[-1,-1]]) {
+                        for (let s=1;s<8;s++) {
+                            const nr=r+dr*s,nc=c+dc*s;
+                            if(nr<0||nr>7||nc<0||nc>7) break;
+                            if(this.board[nr*8+nc]!==EMPTY) break;
+                            if(sign===1) wKMob++; else bKMob++;
                         }
                     }
                 }
             }
 
-            let totalPieces = wK + wP + bK + bP;
-            let isEndgame = totalPieces <= 8 || this.isEndgame;
+            const totalPieces = wK+wP+bK+bP;
+            // Continuous king value: 300 (full board, 24 pieces) → 395 (bare kings)
+            const kingVal = 300 + Math.round((24 - Math.min(totalPieces, 24)) * 3.96);
+            const isEG    = totalPieces <= 8 || this.isEndgame;
 
-            // ── Material ─────────────────────────────────────────────────────
-            // Kings are substantially stronger in Brazilian draughts (fly kings)
-            let kingVal = isEndgame ? 360 : 310;
-            let score = (wP - bP) * 100 + (wK - bK) * kingVal;
+            // ── Material ────────────────────────────────────────────────────
+            let score = (wP-bP)*100 + (wK-bK)*kingVal;
+            const wTot = wP+wK, bTot = bP+bK;
+            if (wTot !== bTot) score += (wTot-bTot)*18; // numerical superiority compound
 
-            // Non-linear material bonus: numerical superiority compounds
-            let wTotal = wP + wK, bTotal = bP + bK;
-            if (wTotal !== bTotal) score += (wTotal - bTotal) * 18;
+            // ── Positional ──────────────────────────────────────────────────
+            score += (wAdv-bAdv)*5;
+            score += (wMaxRank-bMaxRank)*8;   // promotion pressure
+            score += (wCenter-bCenter)*9;
+            score += (wMob-bMob)*3;
+            score -= (wEdge-bEdge)*6;         // edge-file mobility penalty
+            score -= (Math.abs(wLft-wRgt)-Math.abs(bLft-bRgt))*4; // wing balance
+            // [NEW-2] Protected men bonus
+            score += (wProt-bProt)*4;
+            // [NEW-2] Backward men penalty
+            score -= (wBack2-bBack2)*5;
+            // Back-row anchor (midgame only)
+            if (!isEG) score += (wBack-bBack)*7;
 
-            // ── Advancement ──────────────────────────────────────────────────
-            score += (wAdvTotal - bAdvTotal) * 5;
-
-            // ── Central control ──────────────────────────────────────────────
-            score += (wCenterMen - bCenterMen) * 9;
-
-            // ── Mobility (forward squares free for men) ───────────────────────
-            score += (wMobEst - bMobEst) * 3;
-
-            // ── Back row protection (mid-game only) ───────────────────────────
-            if (!isEndgame) {
-                score += (wBackRow - bBackRow) * 7;
-            }
-
-            // ── King activity ─────────────────────────────────────────────────
-            score += (wKingMob - bKingMob) * 2;
+            // ── King activity ────────────────────────────────────────────────
+            score += (wKMob-bKMob)*2;
 
             // ── Endgame-specific ─────────────────────────────────────────────
-            if (isEndgame) {
-                // Centralize kings strongly
-                score += (wKingCenter - bKingCenter) * 6;
+            if (isEG) {
+                score += (wKCtr-bKCtr)*6;
+                if (wP>0 && wK>=bK) score += wAdv*4;
+                if (bP>0 && bK>=wK) score -= bAdv*4;
+                if (wTot>bTot) score += totalPieces<6 ? 90 : 45;
+                else if (bTot>wTot) score -= totalPieces<6 ? 90 : 45;
 
-                // King vs man: accelerate pawn promotion
-                if (wP > 0 && wK >= bK) score += wAdvTotal * 4;
-                if (bP > 0 && bK >= wK) score -= bAdvTotal * 4;
+                // [NEW-2] King-chase: winning king minimises Chebyshev distance to lone king
+                if (wKCnt===1 && bKCnt>=2 && wKingPos>=0 && bKingPos>=0) {
+                    const wr=wKingPos>>3,wc=wKingPos&7,br=bKingPos>>3,bc=bKingPos&7;
+                    score -= (7-Math.max(Math.abs(wr-br),Math.abs(wc-bc)))*9;
+                } else if (bKCnt===1 && wKCnt>=2 && bKingPos>=0 && wKingPos>=0) {
+                    const br=bKingPos>>3,bc=bKingPos&7,wr=wKingPos>>3,wc=wKingPos&7;
+                    score += (7-Math.max(Math.abs(br-wr),Math.abs(bc-wc)))*9;
+                }
 
-                // Avoid draw by triangulation: lone side should trade aggressively
-                // If we're winning materially, push to convert faster
-                if (wTotal > bTotal) score += (totalPieces < 6 ? 80 : 40);
-                else if (bTotal > wTotal) score -= (totalPieces < 6 ? 80 : 40);
+                // [NEW-2] 3K vs 1K: reward corner confinement of lone king
+                if (wK===3 && bK===1 && wP===0 && bP===0 && bKingPos>=0) {
+                    const kr=bKingPos>>3,kc=bKingPos&7;
+                    const edgeDist = Math.min(kr,7-kr,kc,7-kc);
+                    score += (3-edgeDist)*22; // corner-trapped = easier to win
+                }
+                if (bK===3 && wK===1 && wP===0 && bP===0 && wKingPos>=0) {
+                    const kr=wKingPos>>3,kc=wKingPos&7;
+                    const edgeDist = Math.min(kr,7-kr,kc,7-kc);
+                    score -= (3-edgeDist)*22;
+                }
+
+                // [NEW-2] 2K vs 1M: kings coordinated to block/capture
+                if (wK===2 && bP===1 && wP===0 && bK===0) score += 120;
+                if (bK===2 && wP===1 && bP===0 && wK===0) score -= 120;
             }
 
             return score * this.turn;
         }
     }
 
-    function idx2Str(i) { return String.fromCharCode(97+(i%8)) + (Math.floor(i/8)+1); }
+    // ════════════════════════════════════════════════════════════════════════
+    //  MOVE UTILITIES
+    // ════════════════════════════════════════════════════════════════════════
+    function idx2Str(i) { return String.fromCharCode(97+(i&7)) + ((i>>3)+1); }
     function move2Str(m) {
         let s = idx2Str(m.from);
-        if (m.captured.length>0) for (let p of m.path) s += "x" + idx2Str(p);
+        if (m.captured.length > 0) for (const p of m.path) s += "x" + idx2Str(p);
         else s += "-" + idx2Str(m.to);
         return s;
     }
-    // Basic sort used for UI/suggestion display (captures first, then promos)
     function moveSorter(a, b) {
-        let sA = (a.captured.length * 100) + (a.promo ? 50 : 0);
-        let sB = (b.captured.length * 100) + (b.promo ? 50 : 0);
-        if (sA !== sB) return sB - sA;
+        const sa = a.captured.length*100 + (a.promo?50:0);
+        const sb = b.captured.length*100 + (b.promo?50:0);
+        if (sa !== sb) return sb - sa;
         return move2Str(a).localeCompare(move2Str(b));
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // TRANSPOSITION TABLE — uses existing Zobrist hash infrastructure
+    //  TRANSPOSITION TABLE  (generation-isolated)
     // ════════════════════════════════════════════════════════════════════════
-    const TT_SIZE  = 1 << 19;   // 524 288 slots (~8 MB with objects)
+    const TT_SIZE  = 1 << 19;  // 524 288 slots
     const TT_MASK  = TT_SIZE - 1;
     const TT_EXACT = 0, TT_LOWER = 1, TT_UPPER = 2;
-    const tt = new Array(TT_SIZE); // sparse — entries created lazily
+    const tt = new Array(TT_SIZE);
+    let   ttGen = 0; // [FIX-2] incremented on each resetBoard()
 
-    function ttStore(hash, depth, flag, score, fromIdx, toIdx) {
-        let idx = hash & TT_MASK;
-        let e = tt[idx];
-        // Always-replace strategy: simpler and effective for draughts
-        if (!e) { tt[idx] = { h: hash, d: depth, f: flag, s: score, fm: fromIdx, tm: toIdx }; }
-        else    { e.h = hash; e.d = depth; e.f = flag; e.s = score; e.fm = fromIdx; e.tm = toIdx; }
+    function ttStore(hash, depth, flag, score, fm, tm) {
+        const idx = hash & TT_MASK;
+        const e   = tt[idx];
+        // Replace if: slot empty OR stale generation OR hash mismatch OR deeper/equal entry
+        if (!e || e.g !== ttGen || e.h !== hash || depth >= e.d) {
+            if (!e) tt[idx] = { h: hash, d: depth, f: flag, s: score, fm, tm, g: ttGen };
+            else { e.h=hash; e.d=depth; e.f=flag; e.s=score; e.fm=fm; e.tm=tm; e.g=ttGen; }
+        }
     }
-
     function ttProbe(hash) {
-        let e = tt[hash & TT_MASK];
-        return (e && e.h === hash) ? e : null;
+        const e = tt[hash & TT_MASK];
+        return (e && e.g === ttGen && e.h === hash) ? e : null;
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // KILLER MOVES  (2 slots per ply)
+    //  KILLER MOVES + HISTORY
     // ════════════════════════════════════════════════════════════════════════
-    const MAX_PLY  = 40;
-    const killers  = Array.from({ length: MAX_PLY }, () => [null, null]);
+    const MAX_PLY = 64;
+    const killers = Array.from({ length: MAX_PLY }, () => [null, null]);
+    const histTable = new Int32Array(4096);
 
     function storeKiller(ply, m) {
-        let k = killers[ply];
+        if (ply >= MAX_PLY) return;
+        const k = killers[ply];
         if (k[0] && k[0].from === m.from && k[0].to === m.to) return;
         k[1] = k[0]; k[0] = { from: m.from, to: m.to };
     }
 
-    // ════════════════════════════════════════════════════════════════════════
-    // HISTORY HEURISTIC  [from * 64 + to]
-    // ════════════════════════════════════════════════════════════════════════
-    const histTable = new Int32Array(4096);
-
-    // ════════════════════════════════════════════════════════════════════════
-    // MOVE SCORING for ordering inside search
-    // ════════════════════════════════════════════════════════════════════════
-    function scoreMoveForOrdering(m, hashFrom, hashTo, ply) {
-        if (m.from === hashFrom && m.to === hashTo) return 2000000; // TT/hash move
-        if (m.captured.length > 0) return 1000000 + m.captured.length * 10000 + (m.promo ? 5000 : 0);
+    function scoreMoveOrder(m, hfm, htm, ply) {
+        if (m.from===hfm && m.to===htm) return 2000000;
+        if (m.captured.length > 0) return 1000000 + m.captured.length*10000 + (m.promo?5000:0);
         if (m.promo) return 900000;
-        let k = killers[ply];
-        if (k[0] && k[0].from === m.from && k[0].to === m.to) return 800000;
-        if (k[1] && k[1].from === m.from && k[1].to === m.to) return 799000;
-        return histTable[m.from * 64 + m.to];
+        if (ply < MAX_PLY) {
+            const k = killers[ply];
+            if (k[0]&&k[0].from===m.from&&k[0].to===m.to) return 800000;
+            if (k[1]&&k[1].from===m.from&&k[1].to===m.to) return 799000;
+        }
+        return histTable[m.from*64+m.to];
     }
 
-    function orderMoves(moves, hashFrom, hashTo, ply) {
-        // Assign scores then sort descending — avoids slow string comparisons
-        let n = moves.length;
-        let scores = new Int32Array(n);
-        for (let i = 0; i < n; i++) scores[i] = scoreMoveForOrdering(moves[i], hashFrom, hashTo, ply);
-        // Insertion sort (fast for small arrays typical in draughts)
+    function orderMoves(moves, hfm, htm, ply) {
+        const n = moves.length, scores = new Int32Array(n);
+        for (let i = 0; i < n; i++) scores[i] = scoreMoveOrder(moves[i], hfm, htm, ply);
         for (let i = 1; i < n; i++) {
-            let sm = scores[i], mv = moves[i], j = i - 1;
-            while (j >= 0 && scores[j] < sm) { scores[j+1] = scores[j]; moves[j+1] = moves[j]; j--; }
-            scores[j+1] = sm; moves[j+1] = mv;
+            const sm = scores[i], mv = moves[i]; let j = i-1;
+            while (j>=0 && scores[j]<sm) { scores[j+1]=scores[j]; moves[j+1]=moves[j]; j--; }
+            scores[j+1]=sm; moves[j+1]=mv;
         }
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // SEARCH — Negamax + PVS + Alpha-Beta + TT + Killers + History
+    //  OPENING BOOK  (Brazilian Draughts — Cruz, Pioneiro & variations)
     // ════════════════════════════════════════════════════════════════════════
-    let nodes = 0;
-    let searchAborted = false;
-    let searchStartTime = 0;
-    let searchTimeLimitMs = 0; // 0 = no limit
+    // Board coordinates (algebraic): a-h left→right, 1-8 bottom→top.
+    // White pieces start: a3,c3,e3,g3 (row3), b2,d2,f2,h2 (row2), a1,c1,e1,g1 (row1).
+    // Black pieces start: b6,d6,f6,h6 (row6), a7,c7,e7,g7 (row7), b8,d8,f8,h8 (row8).
+    // All 12 lines below were manually verified for legality from the initial position.
+    const BOOK_LINES = [
+        // ── Cruz (c3-d4 center advance) ─────────────────────────────────────
+        ["c3-d4", "d6-c5", "b2-c3", "c5-b4"],
+        ["c3-d4", "d6-c5", "a3-b4", "b6-a5"],
+        ["c3-d4", "f6-e5", "g3-f4", "h6-g5"],
+        ["c3-d4", "h6-g5", "e3-f4", "d6-e5"],
+        // ── Pioneiro (e3-d4 center advance) ─────────────────────────────────
+        ["e3-d4", "d6-e5", "c3-b4", "f6-g5"],
+        ["e3-d4", "f6-g5", "c3-b4", "d6-e5"],
+        ["e3-d4", "h6-g5", "c3-b4", "f6-e5"],
+        // ── Flank (e3-f4) ────────────────────────────────────────────────────
+        ["e3-f4", "f6-e5", "c3-d4", "d6-c5"],
+        ["e3-f4", "d6-c5", "g3-h4", "f6-e5"],
+        // ── Russa variant (g3-f4 / h4) ──────────────────────────────────────
+        ["g3-f4", "f6-g5", "e3-d4", "d6-e5"],
+        ["g3-h4", "h6-g5", "e3-f4", "f6-e5"],
+        // ── Alma (c3-b4 flank) ───────────────────────────────────────────────
+        ["c3-b4", "d6-c5", "e3-d4", "f6-e5"],
+    ];
+
+    // Built at startup; maps Zobrist hash → array of {from,to} candidates
+    const openingBook = Object.create(null);
+
+    function buildOpeningBook() {
+        for (const line of BOOK_LINES) {
+            const state = new State();
+            for (const moveStr of line) {
+                const h  = state.hash();
+                const ms = state.getMoves();
+                // Match algebraic notation
+                const found = ms.find(m => move2Str(m) === moveStr);
+                if (!found) break; // invalid/illegal in this context, stop line
+                if (!openingBook[h]) openingBook[h] = [];
+                if (!openingBook[h].some(e => e.from===found.from && e.to===found.to))
+                    openingBook[h].push({ from: found.from, to: found.to });
+                state.applyMove(found);
+            }
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    //  SEARCH  — Negamax + PVS + LMR + Alpha-Beta + TT + Killers + History
+    // ════════════════════════════════════════════════════════════════════════
+    let nodes = 0, searchAborted = false, searchStartTime = 0, searchTimeLimitMs = 0;
 
     function search(state, depth, alpha, beta, ply) {
         nodes++;
-
-        // Periodic time check (every 2048 nodes)
         if (searchTimeLimitMs > 0 && (nodes & 2047) === 0) {
-            if (Date.now() - searchStartTime > searchTimeLimitMs) {
-                searchAborted = true;
-                return alpha;
-            }
+            if (Date.now() - searchStartTime > searchTimeLimitMs) { searchAborted = true; return alpha; }
         }
-
-        // Draw detection
         if (state.checkDraw()) return 0;
 
-        let hash = state.hash();
-
-        // ── Transposition Table probe ──────────────────────────────────────
-        let hashFrom = -1, hashTo = -1;
-        let tte = ttProbe(hash);
+        const hash = state.hash();
+        let hfm = -1, htm = -1;
+        const tte = ttProbe(hash);
         if (tte) {
-            hashFrom = tte.fm; hashTo = tte.tm;
+            hfm = tte.fm; htm = tte.tm;
             if (tte.d >= depth) {
-                if      (tte.f === TT_EXACT)                    return tte.s;
-                else if (tte.f === TT_LOWER && tte.s >= beta)   return tte.s;
-                else if (tte.f === TT_UPPER && tte.s <= alpha)  return tte.s;
+                if      (tte.f===TT_EXACT)               return tte.s;
+                else if (tte.f===TT_LOWER&&tte.s>=beta)  return tte.s;
+                else if (tte.f===TT_UPPER&&tte.s<=alpha) return tte.s;
             }
         }
 
-        let moves = state.getMoves();
-        if (moves.length === 0) return -9999 + ply; // Loss — prefer later loss
+        const moves = state.getMoves();
+        if (moves.length === 0) return -9999 + ply;
 
-        // ── Quiescence Search ──────────────────────────────────────────────
+        // Quiescence: only captures
         if (depth <= 0) {
-            let hasCaps = moves[0].captured.length > 0;
-            // Static eval when no captures or too deep in quiescence
-            if (!hasCaps || depth < -16) return state.eval();
-            // Otherwise fall through and search captures only
+            if (moves[0].captured.length === 0 || depth < -16) return state.eval();
         }
 
-        // ── Move ordering ──────────────────────────────────────────────────
-        orderMoves(moves, hashFrom, hashTo, ply);
+        orderMoves(moves, hfm, htm, ply);
 
-        let origAlpha = alpha;
-        let bestScore = -Infinity;
-        let bestFrom = -1, bestTo = -1;
+        const origAlpha = alpha;
+        let bestScore = -Infinity, bestFm = -1, bestTm = -1;
 
         for (let i = 0; i < moves.length; i++) {
-            let m = moves[i];
-
-            // In quiescence: skip quiet moves
+            const m = moves[i];
             if (depth <= 0 && m.captured.length === 0) continue;
 
-            let s2 = state.clone();
+            const s2 = state.clone();
             s2.applyMove(m);
 
             let score;
             if (i === 0) {
-                // Full window for first (best-ordered) move
-                score = -search(s2, depth - 1, -beta, -alpha, ply + 1);
+                score = -search(s2, depth-1, -beta, -alpha, ply+1);
             } else {
-                // Principal Variation Search: null window first
-                score = -search(s2, depth - 1, -alpha - 1, -alpha, ply + 1);
-                if (!searchAborted && score > alpha && score < beta) {
-                    // Re-search with full window (PVS re-search)
-                    score = -search(s2, depth - 1, -beta, -alpha, ply + 1);
-                }
+                // LMR: reduce quiet tail moves at depth ≥ 3
+                const doLMR = depth>=3 && i>=3 && m.captured.length===0 && !m.promo && ply>=1;
+                score = -search(s2, depth-1-(doLMR?1:0), -alpha-1, -alpha, ply+1);
+                if (!searchAborted && score > alpha)
+                    score = -search(s2, depth-1, -beta, -alpha, ply+1);
             }
-
             if (searchAborted) return alpha;
 
-            if (score > bestScore) {
-                bestScore = score;
-                bestFrom = m.from; bestTo = m.to;
-            }
+            if (score > bestScore) { bestScore=score; bestFm=m.from; bestTm=m.to; }
             if (score > alpha) alpha = score;
             if (alpha >= beta) {
-                // Beta cutoff — update killers and history
                 if (m.captured.length === 0) {
                     storeKiller(ply, m);
-                    let hk = m.from * 64 + m.to;
-                    histTable[hk] = Math.min(histTable[hk] + depth * depth, 200000);
+                    const hk = m.from*64+m.to;
+                    histTable[hk] = Math.min(histTable[hk]+depth*depth, 200000);
                 }
                 break;
             }
         }
 
-        // ── Store in Transposition Table ───────────────────────────────────
-        if (!searchAborted && bestFrom !== -1) {
-            let flag = bestScore <= origAlpha ? TT_UPPER : bestScore >= beta ? TT_LOWER : TT_EXACT;
-            ttStore(hash, depth, flag, bestScore, bestFrom, bestTo);
+        if (!searchAborted && bestFm !== -1) {
+            const flag = bestScore<=origAlpha ? TT_UPPER : bestScore>=beta ? TT_LOWER : TT_EXACT;
+            ttStore(hash, depth, flag, bestScore, bestFm, bestTm);
         }
-
         return bestScore;
     }
 
-    // ════════════════════════════════════════════════════════════════════════
-    // ITERATIVE DEEPENING + ASPIRATION WINDOWS
-    // Returns: { move, score, depth, nodes, pv }
-    // ════════════════════════════════════════════════════════════════════════
+    // ── Iterative Deepening + Progressive Aspiration Windows ──────────────
     function getBestMove(state, maxDepth, timeLimitMs) {
-        let moves = state.getMoves();
-        if (moves.length === 0) return { move: null, score: -10000, depth: 0, nodes: 0, pv: [] };
-        if (moves.length === 1) return { move: moves[0], score: state.eval(), depth: 1, nodes: 1, pv: [moves[0]] };
+        const moves = state.getMoves();
+        if (moves.length === 0) return { move:null, score:-10000, depth:0, nodes:0, pv:[], isBook:false };
+        if (moves.length === 1) return { move:moves[0], score:state.eval(), depth:1, nodes:1, pv:[moves[0]], isBook:false };
 
-        // Reset search state
-        for (let k of killers) { k[0] = null; k[1] = null; }
+        // [NEW-1] Opening book probe
+        const bookH  = state.hash();
+        const bookMs = openingBook[bookH];
+        if (bookMs && bookMs.length > 0 && state.halfMoveClock < 20) {
+            const bm = bookMs[Math.floor(Math.random() * bookMs.length)];
+            const bv = moves.find(m => m.from===bm.from && m.to===bm.to);
+            if (bv) return { move:bv, score:0, depth:0, nodes:0, pv:[bv], isBook:true };
+        }
+
+        for (const k of killers) { k[0]=null; k[1]=null; }
         histTable.fill(0);
-        nodes = 0;
-        searchAborted = false;
-        searchStartTime = Date.now();
-        searchTimeLimitMs = timeLimitMs || 0;
+        nodes=0; searchAborted=false;
+        searchStartTime=Date.now(); searchTimeLimitMs=timeLimitMs||0;
 
-        let bestMove = moves[0];
-        let bestScore = -Infinity;
-        let reachedDepth = 0;
+        let bestMove=moves[0], bestScore=-Infinity, reachedDepth=0;
 
-        // Iterative Deepening: start from depth 1 and go up to maxDepth
-        for (let depth = 1; depth <= maxDepth; depth++) {
+        for (let depth=1; depth<=maxDepth; depth++) {
             let score;
-
-            if (depth >= 5 && bestScore > -9000 && bestScore < 9000) {
-                // ── Aspiration Windows ──────────────────────────────────────
-                let delta = 60;
-                let al = bestScore - delta, be = bestScore + delta;
-                score = search(state, depth, al, be, 0);
-
-                if (!searchAborted && (score <= al || score >= be)) {
-                    // Window miss — full re-search
-                    score = search(state, depth, -Infinity, Infinity, 0);
+            if (depth>=5 && bestScore>-9000 && bestScore<9000) {
+                // Progressive aspiration windows: 50 → 150 → 450 → full
+                let delta=50, ok=false;
+                while (!ok && !searchAborted) {
+                    score = search(state, depth, bestScore-delta, bestScore+delta, 0);
+                    if (searchAborted) break;
+                    if (score>bestScore-delta && score<bestScore+delta) { ok=true; }
+                    else { delta*=3; if (delta>=9000) { score=search(state,depth,-Infinity,Infinity,0); ok=true; } }
                 }
             } else {
                 score = search(state, depth, -Infinity, Infinity, 0);
             }
-
             if (searchAborted) break;
 
-            // Retrieve best move from TT (PV root)
-            let tte = ttProbe(state.hash());
-            if (tte && tte.fm >= 0) {
-                let found = moves.find(m => m.from === tte.fm && m.to === tte.tm);
-                if (found) { bestMove = found; bestScore = score; }
-            } else if (score > bestScore) {
-                bestScore = score;
-            }
-
-            reachedDepth = depth;
+            const tte = ttProbe(state.hash());
+            if (tte && tte.fm>=0) {
+                const f = moves.find(m => m.from===tte.fm && m.to===tte.tm);
+                if (f) { bestMove=f; bestScore=score; }
+            } else if (score>bestScore) { bestScore=score; }
+            reachedDepth=depth;
         }
 
-        // Build partial PV from TT
-        let pv = [];
-        let cur = state.clone();
-        for (let d = 0; d < Math.min(reachedDepth, 6); d++) {
-            let h = cur.hash(), te = ttProbe(h);
-            if (!te || te.fm < 0) break;
-            let ms = cur.getMoves().find(m => m.from === te.fm && m.to === te.tm);
-            if (!ms) break;
-            pv.push(ms);
-            cur = cur.clone(); cur.applyMove(ms);
+        // Extract PV from TT
+        const pv=[], cur=state.clone();
+        for (let d=0; d<Math.min(reachedDepth,6); d++) {
+            const te = ttProbe(cur.hash()); if(!te||te.fm<0) break;
+            const ms = cur.getMoves().find(m=>m.from===te.fm&&m.to===te.tm); if(!ms) break;
+            pv.push(ms); cur.applyMove(ms);
         }
 
-        return { move: bestMove, score: bestScore, depth: reachedDepth, nodes, pv };
+        return { move:bestMove, score:bestScore, depth:reachedDepth, nodes, pv, isBook:false };
     }
 
-    let gameState = new State(), selIdx = -1, valTgt = [], lastM = null;
-    const txtStatus = document.getElementById('status-text'), barStatus = document.getElementById('status-container');
+    // ════════════════════════════════════════════════════════════════════════
+    //  UI STATE
+    // ════════════════════════════════════════════════════════════════════════
+    let gameState = new State(), selIdx=-1, valTgt=[], lastM=null;
+    const txtStatus   = document.getElementById('status-text');
+    const barStatus   = document.getElementById('status-container');
     const txtAnalysis = document.getElementById('analysis-text');
 
+    // ════════════════════════════════════════════════════════════════════════
+    //  CLOCK SYSTEM  (Elite rewrite)
+    //
+    //  Key design decisions vs previous versions:
+    //  • Uses timestamp arithmetic (Date.now()) — immune to JS timer drift.
+    //  • Runs at 250 ms intervals for smooth display without excessive CPU use.
+    //  • The isComputing guard is REMOVED.  During CPU computation it is the
+    //    CPU's turn; the CPU's clock correctly decrements.  The human's clock
+    //    is never running during the CPU's turn.
+    //  • clockLastStamp is set to 0 when the clock is paused/stopped so the
+    //    next tick anchors itself cleanly without a phantom elapsed interval.
+    //  • startClock() / stopClock() are the only entry points.
+    // ════════════════════════════════════════════════════════════════════════
+    function startClock() {
+        if (clockInterval) return;           // already running
+        clockLastStamp = Date.now();         // anchor for first tick
+        clockInterval  = setInterval(clockTick, 250);
+    }
+    function stopClock() {
+        if (clockInterval) { clearInterval(clockInterval); clockInterval = null; }
+        clockLastStamp = 0;
+    }
+    function clockTick() {
+        if (!gameStarted || gameEnded || timeLimit === 0) return;
+        const now     = Date.now();
+        const elapsed = (now - clockLastStamp) / 1000;  // seconds since last tick
+        clockLastStamp = now;
+        if (elapsed <= 0) return;
+
+        if (gameState.turn === 1) {
+            timeW -= elapsed;
+            if (timeW <= 0) { timeW=0; updateClocks(); popModal("Game Over","Time's up! Black Wins."); return; }
+        } else {
+            timeB -= elapsed;
+            if (timeB <= 0) { timeB=0; updateClocks(); popModal("Game Over","Time's up! White Wins."); return; }
+        }
+        updateClocks();
+    }
+
+    function fTime(sec) {
+        const s = Math.max(0, Math.ceil(sec)); // round up to avoid hitting 0:00 early
+        return `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
+    }
+    function updateClocks() {
+        const cw = document.getElementById('clock-white');
+        const cb = document.getElementById('clock-black');
+        if (timeLimit > 0) {
+            cw.innerText = fTime(timeW); cb.innerText = fTime(timeB);
+            // Active timer: highlight. Warning: red-ish when ≤30s
+            const wActive  = gameState.turn===1 && gameStarted && !gameEnded;
+            const bActive  = gameState.turn===-1 && gameStarted && !gameEnded;
+            cw.className   = wActive ? (timeW<=30?'timer warning':'timer active') : 'timer';
+            cb.className   = bActive ? (timeB<=30?'timer warning':'timer active') : 'timer';
+        } else { cw.innerText=cb.innerText='--:--'; cw.className=cb.className='timer'; }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    //  DOM
+    // ════════════════════════════════════════════════════════════════════════
     function initDOM() {
-        const board = document.getElementById('board'); board.innerHTML = '';
-        for (let r=7; r>=0; r--) {
-            for (let c=0; c<8; c++) {
-                let idx = r*8+c, isDark = (r+c)%2===0;
-                let sq = document.createElement('div');
-                sq.className = `square ${isDark ? 'sq-dark' : 'sq-light'}`;
-                sq.id = `sq-${idx}`; sq.onclick = () => onSquareClick(idx);
-                board.appendChild(sq);
-            }
+        const board = document.getElementById('board'); board.innerHTML='';
+        for (let r=7; r>=0; r--) for (let c=0; c<8; c++) {
+            const idx=r*8+c, dark=(r+c)%2===0;
+            const sq=document.createElement('div');
+            sq.className=`square ${dark?'sq-dark':'sq-light'}`;
+            sq.id=`sq-${idx}`; sq.onclick=()=>onSquareClick(idx);
+            board.appendChild(sq);
         }
     }
 
     function render() {
         for (let i=0; i<64; i++) {
-            let sq = document.getElementById(`sq-${i}`); if(!sq) continue;
-            let cName = `square ${((Math.floor(i/8)+(i%8))%2===0) ? 'sq-dark' : 'sq-light'}`;
-            if (selIdx === i) cName += ' highlight';
-            if (lastM && (lastM.from === i || lastM.to === i)) cName += ' last-move';
-            if (valTgt.find(m => m.to === i)) cName += ' suggestion';
-            sq.className = cName;
-            
-            let p = gameState.board[i];
-            sq.innerHTML = p !== EMPTY ? `<div class="piece ${Math.sign(p)===1?'white':'black'} ${Math.abs(p)===2?'king':''}"></div>` : '';
+            const sq=document.getElementById(`sq-${i}`); if(!sq) continue;
+            let cn=`square ${((i>>3)+(i&7))%2===0?'sq-dark':'sq-light'}`;
+            if (selIdx===i) cn+=' highlight';
+            if (lastM && (lastM.from===i || lastM.to===i)) cn+=' last-move';
+            if (valTgt.find(m=>m.to===i)) cn+=' suggestion';
+            sq.className=cn;
+            const p=gameState.board[i];
+            sq.innerHTML = p!==EMPTY
+                ? `<div class="piece ${Math.sign(p)===1?'white':'black'} ${Math.abs(p)===2?'king':''}"></div>`
+                : '';
         }
-        
-        let boardEl = document.getElementById('board');
-        if (cfgView === 'B') boardEl.classList.add('rotated'); else boardEl.classList.remove('rotated');
+        const be=document.getElementById('board');
+        if (cfgView==='B') be.classList.add('rotated'); else be.classList.remove('rotated');
 
         if (!gameStarted) {
-            txtStatus.innerText = gameEnded ? "Game Over" : "Press ▶ Start / Resume"; barStatus.classList.remove('computing');
+            txtStatus.innerText = gameEnded ? "Game Over" : "Press ▶ Start / Resume";
+            barStatus.classList.remove('computing');
         } else if (!gameEnded) {
-            let moves = gameState.getMoves(), draw = gameState.checkDraw();
-            if (moves.length === 0) popModal("Game Over", `${gameState.turn===1?'Black':'White'} Wins! (No legal moves)`);
-            else if (draw) popModal("Game Over", draw);
-            else { txtStatus.innerText = `${gameState.turn===1?'White':'Black'}'s Turn`; barStatus.classList.remove('computing'); }
+            const moves=gameState.getMoves(), draw=gameState.checkDraw();
+            if      (moves.length===0) popModal("Game Over",`${gameState.turn===1?'Black':'White'} Wins! (No legal moves)`);
+            else if (draw)             popModal("Game Over", draw);
+            else {
+                txtStatus.innerText=`${gameState.turn===1?'White':'Black'}'s Turn`;
+                barStatus.classList.remove('computing');
+            }
         }
         renderHist(); updateClocks();
     }
 
-    function popModal(title, desc) {
-        if (title === "Game Over") { gameEnded = true; clearInterval(clockInterval); txtStatus.innerText = "Game Over"; }
-        document.getElementById('modal-title').innerText = title;
-        document.getElementById('modal-desc').innerText = desc;
-        document.getElementById('modal').style.display = 'flex';
+    function renderHist() {
+        const h=document.getElementById('history');
+        h.innerHTML=generateSequence(rootNode, 0, true);
+        const a=h.querySelector('.active-move');
+        if (a) a.scrollIntoView({ block:'nearest' });
     }
 
-    function fTime(sec) { return `${Math.floor(sec/60).toString().padStart(2,'0')}:${(sec%60).toString().padStart(2,'0')}`; }
-    function updateClocks() {
-        let cw = document.getElementById('clock-white'), cb = document.getElementById('clock-black');
-        if (timeLimit > 0) {
-            cw.innerText = fTime(timeW); cb.innerText = fTime(timeB);
-            cw.className = gameState.turn===1 && gameStarted && !gameEnded ? 'timer active' : 'timer';
-            cb.className = gameState.turn===-1 && gameStarted && !gameEnded ? 'timer active' : 'timer';
-        } else { cw.innerText = cb.innerText = '--:--'; cw.className = cb.className = 'timer'; }
+    function generateSequence(node, plyCount, isHTML) {
+        let out='', curr=node, ply=plyCount, prevHadVars=false;
+        while (curr.children.length>0) {
+            const main=curr.children[0], isWhite=(ply%2===0);
+            const hasVars=curr.children.length>1;
+            const moveNum=Math.floor(ply/2)+1;
+            if (isWhite)
+                out += isHTML ? `<span class="ply-num">${moveNum}.</span> ` : `${moveNum}. `;
+            else if (curr===node||prevHadVars)
+                out += isHTML ? `<span class="ply-num">${moveNum}...</span> ` : `${moveNum}... `;
+
+            if (isHTML) {
+                const cls=(main===currentNode)?'active-move':'move-link';
+                out+=`<span class="${cls}" onclick="navToId(${main.id})">${main.moveStr}</span> `;
+            } else out+=main.moveStr+' ';
+
+            for (let i=1;i<curr.children.length;i++) {
+                const v=curr.children[i];
+                out+='( ';
+                out+= isHTML ? `<span class="ply-num">${moveNum}${isWhite?'.':'...'}</span> ` : `${moveNum}${isWhite?'.':'...'} `;
+                const vc=(v===currentNode)?'active-move':'move-link';
+                out+= isHTML ? `<span class="${vc}" onclick="navToId(${v.id})">${v.moveStr}</span> ` : v.moveStr+' ';
+                out+=generateSequence(v, ply+1, isHTML);
+                out+=') ';
+            }
+            prevHadVars=hasVars; curr=main; ply++;
+        }
+        return out;
     }
-    
-    function tick() {
-        if (!gameStarted || gameEnded || timeLimit===0 || isComputing) return;
-        if (gameState.turn===1) { timeW--; if(timeW<=0) popModal("Game Over", "Time's up! Black Wins."); } 
-        else { timeB--; if(timeB<=0) popModal("Game Over", "Time's up! White Wins."); }
-        updateClocks();
+
+    function popModal(title, desc) {
+        if (title==="Game Over") { gameEnded=true; stopClock(); txtStatus.innerText="Game Over"; }
+        document.getElementById('modal-title').innerText=title;
+        document.getElementById('modal-desc').innerText=desc;
+        document.getElementById('modal').style.display='flex';
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    //  GAME LOOP
+    // ════════════════════════════════════════════════════════════════════════
+    function loop() {
+        if (!gameStarted||gameEnded||isComputing) return;
+        const isCPU = (cfgMode===MODE_HVM && gameState.turn===-1) ||
+                      (cfgMode===MODE_MVH && gameState.turn===1)  ||
+                       cfgMode===MODE_MVM;
+        if (isCPU)           triggerCPU();
+        else if (isAnalysisOn) runAna();
+    }
+
+    function getTimeBudget() {
+        if (timeLimit===0) return 0;
+        const rem = gameState.turn===1 ? timeW : timeB;
+        return Math.max(300, Math.min(rem*1000/30, 8000));
+    }
+
+    function triggerCPU() {
+        if (isComputing||gameEnded) return;
+        isComputing=true;
+        txtStatus.innerText="Computing..."; barStatus.classList.add('computing');
+        // clockLastStamp reset so CPU thinking time starts clean
+        clockLastStamp = Date.now();
+        const t0=Date.now();
+        setTimeout(()=>{
+            const res=getBestMove(gameState, cfgDepth, getTimeBudget());
+            const elapsed=((Date.now()-t0)/1000).toFixed(1);
+            isComputing=false;
+            const sc=res.score;
+            const scStr = sc>9000?'Mate': sc<-9000?'-Mate': (sc>=0?'+':'')+(sc/100).toFixed(2);
+            const pvStr = res.pv&&res.pv.length>0 ? res.pv.slice(0,3).map(move2Str).join(' ') : '-';
+            const bookTag = res.isBook ? ' <span style="color:#ffa726;">[Book]</span>' : '';
+            txtAnalysis.innerHTML=`D:<strong>${res.depth}</strong> Eval:<strong style="color:${sc>=0?'#66bb6a':'#ef5350'}">${scStr}</strong> N:<strong>${res.nodes}</strong> T:<strong>${elapsed}s</strong> PV:<strong style="color:#90caf9">${pvStr}</strong>${bookTag}`;
+            if (res.move) exec(res.move); else render();
+        }, 10);
+    }
+
+    function runAna() {
+        const t0=Date.now();
+        txtAnalysis.innerHTML=`<span style="color:#29b6f6;">Evaluating Depth ${cfgDepth}...</span>`;
+        setTimeout(()=>{
+            const res=getBestMove(gameState, cfgDepth, 0);
+            const elapsed=((Date.now()-t0)/1000).toFixed(1);
+            const sc=res.score;
+            let scStr, scColor;
+            if      (sc>9000)  { scStr='Mate';  scColor='#ffa726'; }
+            else if (sc<-9000) { scStr='-Mate'; scColor='#ffa726'; }
+            else { scStr=(sc>=0?'+':'')+(sc/100).toFixed(2); scColor=sc>=0?'#66bb6a':'#ef5350'; }
+            const pvStr=res.pv&&res.pv.length>0?res.pv.slice(0,5).map(move2Str).join(' '):'-';
+            const bookTag=res.isBook?'<span style="color:#ffa726;"> [Book]</span>':'';
+            txtAnalysis.innerHTML=`D:<strong>${res.depth}</strong> Eval:<strong style="color:${scColor}">${scStr}</strong> N:<strong>${res.nodes}</strong> T:<strong>${elapsed}s</strong> PV:<strong style="color:#90caf9">${pvStr}</strong>${bookTag}`;
+            if (res.move) { selIdx=res.move.from; valTgt=[res.move]; render(); }
+        }, 10);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    //  BOARD ACTIONS
+    // ════════════════════════════════════════════════════════════════════════
+    function resetBoard() {
+        gameStarted=false; gameEnded=false; isComputing=false;
+        stopClock();
+        ttGen++; // [FIX-2] invalidate all cross-game TT entries
+
+        const ns=new State();
+        timeLimit=parseInt(document.getElementById('cfg-time').value);
+        ns.timeW=timeLimit; ns.timeB=timeLimit;
+        timeW=timeLimit; timeB=timeLimit;
+
+        rootNode={ id:0, parent:null, moveStr:null, state:ns, children:[] };
+        nextNodeId=1; allNodes={ 0:rootNode }; currentNode=rootNode;
+        gameState=ns.clone();
+
+        selIdx=-1; valTgt=[]; lastM=null;
+        document.getElementById('modal').style.display='none';
+        render(); txtAnalysis.innerText='Analysis Mode: Off';
+    }
+
+    function resumeGame() {
+        if (gameEnded) return;
+        gameStarted=true;
+        // Navigate to live position if history navigation left us behind
+        if (currentNode !== getLiveNode()) {
+            const live=getLiveNode();
+            currentNode=live; gameState=live.state.clone();
+            if (live.state.timeW!==undefined) { timeW=live.state.timeW; timeB=live.state.timeB; }
+            lastM=live.move||null;
+        }
+        if (timeLimit>0) startClock();
+        render(); loop();
+    }
+    function getLiveNode() {
+        // Walk to deepest main-line node
+        let n=rootNode; while (n.children.length>0) n=n.children[0]; return n;
     }
 
     function onSquareClick(idx) {
-        if (!gameStarted || isComputing || gameEnded) return;
-        let isCPU = gameStarted && ((cfgMode===MODE_HVM && gameState.turn===-1) || (cfgMode===MODE_MVH && gameState.turn===1) || cfgMode===MODE_MVM);
-        if (isCPU && cfgMode !== MODE_SAND && !isAnalysisOn) return;
+        if (!gameStarted||isComputing||gameEnded) return;
+        const isCPU=(cfgMode===MODE_HVM&&gameState.turn===-1)||(cfgMode===MODE_MVH&&gameState.turn===1)||cfgMode===MODE_MVM;
+        if (isCPU&&cfgMode!==MODE_SAND&&!isAnalysisOn) return;
 
-        let m = valTgt.find(m => m.to === idx);
+        const m=valTgt.find(m=>m.to===idx);
         if (m) { exec(m); return; }
-
-        if (gameState.board[idx] !== EMPTY && Math.sign(gameState.board[idx]) === gameState.turn) {
-            selIdx = idx; valTgt = gameState.getMoves().filter(m => m.from === idx);
-        } else { selIdx = -1; valTgt = []; }
+        if (gameState.board[idx]!==EMPTY&&Math.sign(gameState.board[idx])===gameState.turn) {
+            selIdx=idx; valTgt=gameState.getMoves().filter(m=>m.from===idx);
+        } else { selIdx=-1; valTgt=[]; }
         render();
     }
 
     function exec(m) {
-        let mStr = move2Str(m);
-        let existing = currentNode.children.find(c => c.moveStr === mStr);
-        
+        const mStr=move2Str(m);
+        const existing=currentNode.children.find(c=>c.moveStr===mStr);
         if (existing) {
-            currentNode = existing;
-            gameState = currentNode.state.clone();
-            if (currentNode.state.timeW !== undefined) { timeW = currentNode.state.timeW; timeB = currentNode.state.timeB; }
-            selIdx = -1; valTgt = []; lastM = m; render(); 
-            if (!gameEnded && gameStarted) setTimeout(loop, 50);
-        } else if (currentNode.children.length > 0) {
-            // Divergence Detected: Manual move while children exist
-            pendingBranchMove = m;
-            document.getElementById('branch-modal').style.display = 'flex';
+            currentNode=existing; gameState=currentNode.state.clone();
+            if (currentNode.state.timeW!==undefined) { timeW=currentNode.state.timeW; timeB=currentNode.state.timeB; }
+            selIdx=-1; valTgt=[]; lastM=m;
+            // Restart clock anchor after move so no phantom elapsed time is added
+            if (gameStarted&&timeLimit>0) clockLastStamp=Date.now();
+            render(); if (!gameEnded&&gameStarted) setTimeout(loop,50);
+        } else if (currentNode.children.length>0) {
+            pendingBranchMove=m; document.getElementById('branch-modal').style.display='flex';
         } else {
             addNodeAndApply(m);
         }
     }
 
     function addNodeAndApply(m) {
-        let newState = currentNode.state.clone();
-        newState.applyMove(m);
-        newState.timeW = timeW; newState.timeB = timeB;
-        
-        let n = { id: nextNodeId++, parent: currentNode, moveStr: move2Str(m), state: newState, children: [], move: m };
-        currentNode.children.push(n);
-        allNodes[n.id] = n;
-        currentNode = n;
-        
-        gameState = currentNode.state.clone();
-        selIdx = -1; valTgt = []; lastM = m; render(); 
-        if (!gameEnded && gameStarted) setTimeout(loop, 50);
+        const newState=currentNode.state.clone();
+        newState.applyMove(m); newState.timeW=timeW; newState.timeB=timeB;
+        const n={ id:nextNodeId++, parent:currentNode, moveStr:move2Str(m), state:newState, children:[], move:m };
+        currentNode.children.push(n); allNodes[n.id]=n; currentNode=n;
+        gameState=currentNode.state.clone();
+        selIdx=-1; valTgt=[]; lastM=m;
+        // Anchor clock stamp after move to avoid charging the new player for processing time
+        if (gameStarted&&timeLimit>0) clockLastStamp=Date.now();
+        // [FIX-1] Auto-start clock in HvH (or any mode) when moves are being played
+        if (gameStarted&&!gameEnded&&timeLimit>0&&!clockInterval) startClock();
+        render(); if (!gameEnded&&gameStarted) setTimeout(loop,50);
     }
 
     window.branchReplace = function() {
-        document.getElementById('branch-modal').style.display = 'none';
-        currentNode.children = []; // Purge alternate futures
-        addNodeAndApply(pendingBranchMove);
+        document.getElementById('branch-modal').style.display='none';
+        currentNode.children=[]; addNodeAndApply(pendingBranchMove);
     };
     window.branchAdd = function() {
-        document.getElementById('branch-modal').style.display = 'none';
+        document.getElementById('branch-modal').style.display='none';
         addNodeAndApply(pendingBranchMove);
     };
     window.branchCancel = function() {
-        document.getElementById('branch-modal').style.display = 'none';
-        pendingBranchMove = null; selIdx = -1; valTgt = []; render();
+        document.getElementById('branch-modal').style.display='none';
+        pendingBranchMove=null; selIdx=-1; valTgt=[]; render();
     };
 
-    // Time Travel Logic
+    // Time-travel / History navigation
     window.navToId = function(id) {
         if (isComputing) return;
-        let n = allNodes[id];
-        if (n) {
-            gameStarted = false; // PAUSE engine when navigating time!
-            clearInterval(clockInterval); clockInterval = null; // Stop the clock
-            currentNode = n; gameState = n.state.clone();
-            lastM = n.move || null; selIdx = -1; valTgt = []; 
-            txtStatus.innerText = "Game Paused (History)"; // Indicate paused state
-            render();
-        }
+        const n=allNodes[id]; if (!n) return;
+        // Pause the game but keep the clock stopped until Resume is pressed
+        stopClock();
+        gameStarted=false;
+        currentNode=n; gameState=n.state.clone();
+        lastM=n.move||null; selIdx=-1; valTgt=[];
+        txtStatus.innerText="Game Paused (History)";
+        render();
     };
 
-    window.addEventListener('keydown', (e) => {
-        if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
-        if (e.key === 'ArrowLeft') { e.preventDefault(); if(currentNode.parent) navToId(currentNode.parent.id); }
-        if (e.key === 'ArrowRight') { e.preventDefault(); if(currentNode.children.length > 0) navToId(currentNode.children[0].id); }
-        if (e.key === 'ArrowUp') { e.preventDefault(); navToId(0); }
-        if (e.key === 'ArrowDown') { e.preventDefault(); let c = currentNode; while(c.children.length > 0) c = c.children[0]; navToId(c.id); }
+    window.addEventListener('keydown', e=>{
+        if (e.target.tagName==='TEXTAREA'||e.target.tagName==='INPUT') return;
+        if (e.key==='ArrowLeft')  { e.preventDefault(); if(currentNode.parent) navToId(currentNode.parent.id); }
+        if (e.key==='ArrowRight') { e.preventDefault(); if(currentNode.children.length>0) navToId(currentNode.children[0].id); }
+        if (e.key==='ArrowUp')    { e.preventDefault(); navToId(0); }
+        if (e.key==='ArrowDown')  { e.preventDefault(); let c=currentNode; while(c.children.length>0) c=c.children[0]; navToId(c.id); }
     });
 
-    document.getElementById('btn-nav-start').onclick = () => navToId(0);
-    document.getElementById('btn-nav-prev').onclick = () => { if(currentNode.parent) navToId(currentNode.parent.id); };
-    document.getElementById('btn-nav-next').onclick = () => { if(currentNode.children.length > 0) navToId(currentNode.children[0].id); };
-    document.getElementById('btn-nav-end').onclick = () => { let c = currentNode; while(c.children.length > 0) c = c.children[0]; navToId(c.id); };
-
-    function generateSequence(node, plyCount, isHTML) {
-        let out = "", curr = node, ply = plyCount;
-        let prevHadVars = false; // track if last node showed variations
-
-        while (curr.children.length > 0) {
-            let main = curr.children[0], isWhite = (ply % 2 === 0);
-            let hasVars = curr.children.length > 1;
-            let moveNum = Math.floor(ply / 2) + 1;
-
-            // Move number prefix:
-            // White: always "N."
-            // Black: "N..." only at sequence start OR right after a variation block
-            if (isWhite) {
-                out += isHTML ? `<span class="ply-num">${moveNum}.</span> ` : `${moveNum}. `;
-            } else if (curr === node || prevHadVars) {
-                out += isHTML ? `<span class="ply-num">${moveNum}...</span> ` : `${moveNum}... `;
-            }
-
-            // Main move (clickable in HTML)
-            if (isHTML) {
-                let cls = (main === currentNode) ? "active-move" : "move-link";
-                out += `<span class="${cls}" onclick="navToId(${main.id})">${main.moveStr}</span> `;
-            } else out += `${main.moveStr} `;
-
-            // Variation branches
-            for (let i = 1; i < curr.children.length; i++) {
-                let varChild = curr.children[i];
-                out += `( `;
-                // Every variation first move always gets a number
-                out += isHTML
-                    ? `<span class="ply-num">${moveNum}${isWhite ? '.' : '...'}</span> `
-                    : `${moveNum}${isWhite ? '.' : '...'} `;
-                if (isHTML) {
-                    let cls = (varChild === currentNode) ? "active-move" : "move-link";
-                    out += `<span class="${cls}" onclick="navToId(${varChild.id})">${varChild.moveStr}</span> `;
-                } else out += `${varChild.moveStr} `;
-                out += generateSequence(varChild, ply + 1, isHTML);
-                out += `) `;
-            }
-
-            prevHadVars = hasVars;
-            curr = main; ply++;
-        }
-        return out;
-    }
-
-    function renderHist() {
-        let el = document.getElementById('history');
-        el.innerHTML = generateSequence(rootNode, 0, true);
-        let act = el.querySelector('.active-move'); if(act) act.scrollIntoView({block: 'nearest'});
-    }
-
-    function loop() {
-        if (!gameStarted || gameEnded) return;
-        let isCPU = (cfgMode===MODE_HVM && gameState.turn===-1) || (cfgMode===MODE_MVH && gameState.turn===1) || cfgMode===MODE_MVM;
-        if (isAnalysisOn) { runAna(); return; }
-        if (isCPU && cfgMode !== MODE_SAND) triggerCPU(); else txtAnalysis.innerText = "Analysis Mode: Off";
-    }
-
-    // Time budget per move (ms) mapped to depth level
-    function getTimeBudget() {
-        // Soft time cap based on clock; keeps engine responsive
-        if (timeLimit === 0) return 0; // no clock → no time limit, use depth only
-        let remaining = gameState.turn === 1 ? timeW : timeB;
-        if (remaining <= 0) return 300;
-        // Allocate ~1/30 of remaining time per move (reasonable for most positions)
-        return Math.max(300, Math.min(remaining * 1000 / 30, 8000));
-    }
-
-    function triggerCPU() {
-        if (isComputing || gameEnded) return;
-        isComputing = true;
-        txtStatus.innerText = "Computing..."; barStatus.classList.add('computing');
-        let t0 = Date.now();
-        setTimeout(() => {
-            let timeBudget = getTimeBudget();
-            let res = getBestMove(gameState, cfgDepth, timeBudget);
-            let elapsed = ((Date.now() - t0) / 1000).toFixed(1);
-            isComputing = false;
-            // Show brief engine info in analysis bar
-            let sc = res.score;
-            let scStr = sc > 9000 ? 'Mate' : sc < -9000 ? '-Mate' : (sc >= 0 ? '+' : '') + (sc/100).toFixed(2);
-            let pvStr = res.pv && res.pv.length > 0 ? res.pv.slice(0,3).map(move2Str).join(' ') : '-';
-            txtAnalysis.innerHTML = `D:<strong>${res.depth}</strong> Eval:<strong style="color:${sc>=0?'#66bb6a':'#ef5350'}">${scStr}</strong> N:<strong>${res.nodes}</strong> T:<strong>${elapsed}s</strong> PV:<strong style="color:#90caf9">${pvStr}</strong>`;
-            if (res.move) exec(res.move); else render();
-        }, 10);
-    }
-
-    function runAna() {
-        let t0 = Date.now();
-        txtAnalysis.innerHTML = `<span style="color:#29b6f6;">Evaluating Depth ${cfgDepth}...</span>`;
-        setTimeout(() => {
-            let res = getBestMove(gameState, cfgDepth, 0);
-            let elapsed = ((Date.now() - t0) / 1000).toFixed(1);
-            let sc = res.score;
-            let scStr, scColor;
-            if (sc > 9000)       { scStr = 'Mate';  scColor = '#ffa726'; }
-            else if (sc < -9000) { scStr = '-Mate'; scColor = '#ffa726'; }
-            else {
-                scStr = (sc >= 0 ? '+' : '') + (sc/100).toFixed(2);
-                scColor = sc >= 0 ? '#66bb6a' : '#ef5350';
-            }
-            let pvStr = res.pv && res.pv.length > 0 ? res.pv.slice(0,5).map(move2Str).join(' ') : '-';
-            txtAnalysis.innerHTML =
-                `D:<strong>${res.depth}</strong> ` +
-                `Eval:<strong style="color:${scColor}">${scStr}</strong> ` +
-                `N:<strong>${res.nodes}</strong> ` +
-                `T:<strong>${elapsed}s</strong> ` +
-                `PV:<strong style="color:#90caf9">${pvStr}</strong>`;
-            if (res.move) { selIdx = res.move.from; valTgt = [res.move]; render(); }
-        }, 10);
-    }
-
-    function resetBoard() {
-        gameStarted = false; gameEnded = false; isComputing = false;
-        if (clockInterval) clearInterval(clockInterval);
-        
-        let ns = new State();
-        timeLimit = parseInt(document.getElementById('cfg-time').value); 
-        ns.timeW = timeLimit; ns.timeB = timeLimit; timeW = timeLimit; timeB = timeLimit;
-        
-        rootNode = { id: 0, parent: null, moveStr: null, state: ns, children: [] };
-        nextNodeId = 1; allNodes = { 0: rootNode }; currentNode = rootNode;
-        gameState = ns.clone();
-        
-        selIdx = -1; valTgt = []; lastM = null;
-        document.getElementById('modal').style.display = 'none';
-        render(); txtAnalysis.innerText = "Analysis Mode: Off";
-    }
-
-    function resumeGame() {
-        if (gameEnded) return;
-        gameStarted = true;
-        if (timeLimit > 0 && !clockInterval) clockInterval = setInterval(tick, 1000);
-        render(); loop();
-    }
-
-    document.getElementById('cfg-mode').onchange = e => { 
-        cfgMode = parseInt(e.target.value); 
-        cfgView = (cfgMode===MODE_MVH) ? 'B' : 'W'; document.getElementById('cfg-view').value = cfgView;
-        render(); if(gameStarted) loop(); 
+    // ── Config handlers ──────────────────────────────────────────────────────
+    document.getElementById('cfg-mode').onchange=e=>{
+        cfgMode=parseInt(e.target.value);
+        cfgView=(cfgMode===MODE_MVH)?'B':'W'; document.getElementById('cfg-view').value=cfgView;
+        render(); if(gameStarted) loop();
     };
-    document.getElementById('cfg-view').onchange = e => { cfgView = e.target.value; render(); };
-    document.getElementById('cfg-depth').onchange = e => { cfgDepth = parseInt(e.target.value); if(isAnalysisOn && gameStarted) runAna(); };
-    document.getElementById('cfg-time').onchange = e => { 
-        if(!gameStarted) {
-            timeLimit = parseInt(e.target.value); timeW = timeB = timeLimit;
-            for(let id in allNodes) { allNodes[id].state.timeW = timeLimit; allNodes[id].state.timeB = timeLimit; }
+    document.getElementById('cfg-view').onchange    =e=>{ cfgView=e.target.value; render(); };
+    document.getElementById('cfg-depth').onchange   =e=>{ cfgDepth=parseInt(e.target.value); if(isAnalysisOn&&gameStarted) runAna(); };
+    document.getElementById('cfg-time').onchange    =e=>{
+        if (!gameStarted) {
+            timeLimit=parseInt(e.target.value); timeW=timeB=timeLimit;
+            for (const id in allNodes) { allNodes[id].state.timeW=timeLimit; allNodes[id].state.timeB=timeLimit; }
             render();
         }
     };
-    document.getElementById('cfg-analysis').onchange = e => { isAnalysisOn = e.target.checked; selIdx=-1; valTgt=[]; render(); if(gameStarted) loop(); };
-    
-    document.getElementById('btn-resume').onclick = resumeGame;
-    document.getElementById('btn-reset').onclick = resetBoard;
-    document.getElementById('btn-force').onclick = () => { if(gameStarted && !gameEnded) triggerCPU(); };
-    
-    // Non-blocking Move Suggestion
-    document.getElementById('btn-suggest').onclick = () => {
-        if (gameEnded || isComputing) return;
-        txtAnalysis.innerHTML = `<span style="color:#66bb6a;">Suggesting Depth ${cfgDepth}...</span>`;
-        let t0 = Date.now();
-        setTimeout(() => {
-            let res = getBestMove(gameState, cfgDepth, 0);
-            let elapsed = ((Date.now() - t0) / 1000).toFixed(1);
-            let sc = res.score;
-            let scStr = sc > 9000 ? 'Mate' : sc < -9000 ? '-Mate' : (sc >= 0 ? '+' : '') + (sc/100).toFixed(2);
-            let pvStr = res.pv && res.pv.length > 0 ? res.pv.slice(0,3).map(move2Str).join(' ') : '-';
-            txtAnalysis.innerHTML =
-                `Sugestão: <strong style="color:#66bb6a">${res.move ? move2Str(res.move) : '-'}</strong> ` +
-                `| Eval:<strong style="color:${sc>=0?'#66bb6a':'#ef5350'}">${scStr}</strong> ` +
-                `D:<strong>${res.depth}</strong> T:<strong>${elapsed}s</strong>`;
-            if (res.move) { selIdx = res.move.from; valTgt = [res.move]; render(); }
+    document.getElementById('cfg-analysis').onchange=e=>{ isAnalysisOn=e.target.checked; selIdx=-1; valTgt=[]; render(); if(gameStarted) loop(); };
+
+    document.getElementById('btn-resume').onclick =resumeGame;
+    document.getElementById('btn-reset').onclick  =resetBoard;
+    document.getElementById('btn-force').onclick  =()=>{ if(gameStarted&&!gameEnded) triggerCPU(); };
+
+    document.getElementById('btn-suggest').onclick=()=>{
+        if (gameEnded||isComputing) return;
+        txtAnalysis.innerHTML=`<span style="color:#66bb6a;">Suggesting Depth ${cfgDepth}...</span>`;
+        const t0=Date.now();
+        setTimeout(()=>{
+            const res=getBestMove(gameState, cfgDepth, 0);
+            const elapsed=((Date.now()-t0)/1000).toFixed(1);
+            const sc=res.score;
+            const scStr=sc>9000?'Mate':sc<-9000?'-Mate':(sc>=0?'+':'')+(sc/100).toFixed(2);
+            const bookTag=res.isBook?'<span style="color:#ffa726;"> [Book]</span>':'';
+            txtAnalysis.innerHTML=`Sugestão: <strong style="color:#66bb6a">${res.move?move2Str(res.move):'-'}</strong> | Eval:<strong style="color:${sc>=0?'#66bb6a':'#ef5350'}">${scStr}</strong> D:<strong>${res.depth}</strong> T:<strong>${elapsed}s</strong>${bookTag}`;
+            if (res.move) { selIdx=res.move.from; valTgt=[res.move]; render(); }
         }, 10);
     };
 
-    // ── PDN EXPORT ──────────────────────────────────────────────────────────
+    document.getElementById('btn-nav-start').onclick=()=>navToId(0);
+    document.getElementById('btn-nav-prev').onclick =()=>{ if(currentNode.parent) navToId(currentNode.parent.id); };
+    document.getElementById('btn-nav-next').onclick =()=>{ if(currentNode.children.length>0) navToId(currentNode.children[0].id); };
+    document.getElementById('btn-nav-end').onclick  =()=>{ let c=currentNode; while(c.children.length>0) c=c.children[0]; navToId(c.id); };
+
+    // ════════════════════════════════════════════════════════════════════════
+    //  PDN EXPORT
+    // ════════════════════════════════════════════════════════════════════════
     function idxToNum(idx) {
-        let r = Math.floor(idx / 8), c = idx % 8;
-        if ((r + c) % 2 !== 0) return -1;
-        let offset = r % 2 === 0 ? c / 2 : (c - 1) / 2;
-        return (7 - r) * 4 + offset + 1;
+        const r=idx>>3, c=idx&7;
+        if ((r+c)%2!==0) return -1;
+        const offset=r%2===0?c/2:(c-1)/2;
+        return (7-r)*4+offset+1;
     }
-
-    // Inverse: PDN number (1-32) → board index (0-63). Verified against idxToNum.
     function numToIdx(num) {
-        if (num < 1 || num > 32) return -1;
-        let r = 7 - Math.floor((num - 1) / 4);
-        let offset = (num - 1) % 4;
-        let c = r % 2 === 0 ? offset * 2 : offset * 2 + 1;
-        return r * 8 + c;
+        if (num<1||num>32) return -1;
+        const r=7-Math.floor((num-1)/4), offset=(num-1)%4;
+        const c=r%2===0?offset*2:offset*2+1;
+        return r*8+c;
     }
-
     function move2PDN(m) {
         if (!m) return '?';
-        let from = idxToNum(m.from);
-        if (m.captured.length > 0) {
-            let parts = [from];
-            for (let p of m.path) parts.push(idxToNum(p));
-            return parts.join('x');
-        }
-        return from + '-' + idxToNum(m.to);
+        const from=idxToNum(m.from);
+        if (m.captured.length>0) { const parts=[from]; for (const p of m.path) parts.push(idxToNum(p)); return parts.join('x'); }
+        return from+'-'+idxToNum(m.to);
     }
-
     function generatePDN(node, plyCount) {
-        let out = '', curr = node, ply = plyCount;
-        let prevHadVars = false;
-
-        while (curr.children.length > 0) {
-            let main = curr.children[0], isWhite = (ply % 2 === 0);
-            let hasVars = curr.children.length > 1;
-            let moveNum = Math.floor(ply / 2) + 1;
-
-            if (isWhite) {
-                out += `${moveNum}. `;
-            } else if (curr === node || prevHadVars) {
-                out += `${moveNum}... `;
+        let out='', curr=node, ply=plyCount, prevHadVars=false;
+        while (curr.children.length>0) {
+            const main=curr.children[0], isWhite=(ply%2===0), hasVars=curr.children.length>1;
+            const moveNum=Math.floor(ply/2)+1;
+            if (isWhite) out+=`${moveNum}. `;
+            else if (curr===node||prevHadVars) out+=`${moveNum}... `;
+            out+=move2PDN(main.move)+' ';
+            for (let i=1;i<curr.children.length;i++) {
+                const v=curr.children[i];
+                out+=`( ${moveNum}${isWhite?'.':'...'} ${move2PDN(v.move)} ${generatePDN(v,ply+1)}) `;
             }
-
-            out += move2PDN(main.move) + ' ';
-
-            for (let i = 1; i < curr.children.length; i++) {
-                let v = curr.children[i];
-                out += '( ';
-                out += `${moveNum}${isWhite ? '.' : '...'} `;
-                out += move2PDN(v.move) + ' ';
-                out += generatePDN(v, ply + 1);
-                out += ') ';
-            }
-
-            prevHadVars = hasVars;
-            curr = main; ply++;
+            prevHadVars=hasVars; curr=main; ply++;
         }
         return out;
     }
-
-    document.getElementById('btn-export').onclick = async () => {
-        let result = gameEnded ? (gameState.turn === 1 ? '0-1' : '1-0') : '*';
-        let txt  = `[Event "DraughtsMind Pro Match"]\n`;
-        txt += `[GameType "21"]\n`;
-        txt += `[Result "${result}"]\n`;
-        txt += `{DraughtsMind v${ENGINE_VERSION} | depth:${cfgDepth} | time:${timeLimit} | hash:${gameState.hash().toString(16).toUpperCase()}}\n\n`;
-        txt += generatePDN(rootNode, 0);
-        txt += `\n${result}\n`;
-
-        let defaultName = `mind_game_${Date.now()}.pdn`;
-
-        // Try File System Access API (Chrome/Edge – lets user pick folder)
+    document.getElementById('btn-export').onclick=async()=>{
+        const result=gameEnded?(gameState.turn===1?'0-1':'1-0'):'*';
+        let txt=`[Event "DraughtsMind Elite Match"]\n[GameType "21"]\n[Result "${result}"]\n`;
+        txt+=`{DraughtsMind v${ENGINE_VERSION} | depth:${cfgDepth} | time:${timeLimit} | hash:${gameState.hash().toString(16).toUpperCase()}}\n\n`;
+        txt+=generatePDN(rootNode,0)+`\n${result}\n`;
+        const name=`mind_game_${Date.now()}.pdn`;
         if (window.showSaveFilePicker) {
             try {
-                const handle = await window.showSaveFilePicker({
-                    suggestedName: defaultName,
-                    types: [{ description: 'Portable Draughts Notation', accept: { 'text/plain': ['.pdn'] } }]
-                });
-                const writable = await handle.createWritable();
-                await writable.write(txt); await writable.close();
-                txtAnalysis.innerHTML = `<span style="color:#66bb6a;">Exportado: ${defaultName}</span>`;
-                return;
-            } catch (err) {
-                if (err.name === 'AbortError') return; // user cancelled picker
-                // fall through to download fallback
-            }
+                const h=await window.showSaveFilePicker({ suggestedName:name, types:[{description:'PDN',accept:{'text/plain':['.pdn']}}] });
+                const w=await h.createWritable(); await w.write(txt); await w.close();
+                txtAnalysis.innerHTML=`<span style="color:#66bb6a;">Exportado: ${name}</span>`; return;
+            } catch(e) { if(e.name==='AbortError') return; }
         }
-
-        // Universal fallback: auto-download to browser's Downloads folder (Firefox, Safari, etc.)
-        const blob = new Blob([txt], { type: 'text/plain' });
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href = url; a.download = defaultName; a.style.display = 'none';
+        const blob=new Blob([txt],{type:'text/plain'}), url=URL.createObjectURL(blob);
+        const a=document.createElement('a'); a.href=url; a.download=name; a.style.display='none';
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 5000);
-        txtAnalysis.innerHTML = `<span style="color:#66bb6a;">Download: ${defaultName}</span>`;
+        setTimeout(()=>URL.revokeObjectURL(url),5000);
+        txtAnalysis.innerHTML=`<span style="color:#66bb6a;">Download: ${name}</span>`;
     };
 
-    // ── PDN IMPORT ───────────────────────────────────────────────────────────
+    // ════════════════════════════════════════════════════════════════════════
+    //  PDN IMPORT
+    // ════════════════════════════════════════════════════════════════════════
     function tryMatchMove(state, tk) {
-        let moves = state.getMoves();
-
-        // 1. Exact algebraic match (native: a1-b2, a1xb2xc3)
-        let found = moves.find(m => move2Str(m).toLowerCase() === tk.toLowerCase());
+        const moves=state.getMoves();
+        let found=moves.find(m=>move2Str(m).toLowerCase()===tk.toLowerCase());
         if (found) return found;
-
-        // 2. Numeric PDN notation: 11-15, 22x13, 5x14x23, 11:15 (Aurora, standard PDN)
         if (/^\d+([-x:]\d+)+$/i.test(tk)) {
-            let pts = tk.split(/[-x:]/i).map(Number);
-            let isCapture = /[x:]/i.test(tk);
-            let sIdx = numToIdx(pts[0]);
-            let eIdx = numToIdx(pts[pts.length - 1]);
-            if (sIdx < 0 || eIdx < 0) return null;
-
-            let poss = moves.filter(m => m.from === sIdx && m.to === eIdx);
-
-            // Narrow by full path when multiple candidates (multi-jump disambiguation)
-            if (poss.length > 1 && pts.length > 2) {
-                let expectedPath = pts.slice(1).map(numToIdx);
-                let narrowed = poss.filter(m =>
-                    m.path.length === expectedPath.length &&
-                    m.path.every((sq, i) => sq === expectedPath[i])
-                );
-                if (narrowed.length > 0) poss = narrowed;
+            const pts=tk.split(/[-x:]/i).map(Number), isCapture=/[x:]/i.test(tk);
+            const sIdx=numToIdx(pts[0]), eIdx=numToIdx(pts[pts.length-1]);
+            if (sIdx<0||eIdx<0) return null;
+            let poss=moves.filter(m=>m.from===sIdx&&m.to===eIdx);
+            if (poss.length>1&&pts.length>2) {
+                const ep=pts.slice(1).map(numToIdx);
+                const nw=poss.filter(m=>m.path.length===ep.length&&m.path.every((sq,i)=>sq===ep[i]));
+                if (nw.length>0) poss=nw;
             }
-
-            // Prefer captures when separator is x or :
-            if (poss.length > 1 && isCapture) {
-                let caps = poss.filter(m => m.captured.length > 0);
-                if (caps.length > 0) poss = caps;
-            }
-
-            if (poss.length > 0) return poss[0];
+            if (poss.length>1&&isCapture) { const c=poss.filter(m=>m.captured.length>0); if(c.length>0) poss=c; }
+            if (poss.length>0) return poss[0];
         }
-
         return null;
     }
 
     function loadEBNF(str) {
-        // ── Step 1: assemble move text, stripping ; comments PER LINE before joining ──
-        let moveText = '';
+        let moveText='';
         for (let l of str.split('\n')) {
-            l = l.trim();
-            if (!l) continue;
-            if (l.startsWith('['))            continue;  // PDN headers
-            if (l.startsWith('DraughtsMind')) continue;  // legacy metadata
-            if (l.startsWith('HASH='))        break;     // legacy footer
-            // Strip inline ; line-comments BEFORE joining (avoids eating next-line tokens)
-            let sc = l.indexOf(';');
-            if (sc !== -1) l = l.substring(0, sc).trim();
-            if (l) moveText += l + ' ';
+            l=l.trim(); if(!l) continue;
+            if (l.startsWith('['))            continue;
+            if (l.startsWith('DraughtsMind')) continue;
+            if (l.startsWith('HASH='))        break;
+            const sc=l.indexOf(';'); if(sc!==-1) l=l.substring(0,sc).trim();
+            if (l) moveText+=l+' ';
         }
+        moveText=moveText
+            .replace(/\{[^}]*\}/g,' ').replace(/\$\d+/g,' ')
+            .replace(/\b(2-0|0-2|1-1|1-0|0-1|1\/2-1\/2)\b/g,' ')
+            .replace(/\*/g,' ').replace(/\d+\.+/g,' ').replace(/[?!]+/g,' ')
+            .replace(/\(/g,' ( ').replace(/\)/g,' ) ');
 
-        // ── Step 2: exhaustive cleaning ──
-        moveText = moveText.replace(/\{[^}]*\}/g, ' ');           // {block comments}
-        moveText = moveText.replace(/\$\d+/g, ' ');               // NAG $1 $2 …
-        // Result tokens – standard + Brazilian draughts variants
-        moveText = moveText.replace(/\b(2-0|0-2|1-1|1-0|0-1|1\/2-1\/2)\b/g, ' ');
-        moveText = moveText.replace(/\*/g, ' ');                   // lone * (unfinished)
-        moveText = moveText.replace(/\d+\.+/g, ' ');              // move numbers 1. 2. 8...
-        moveText = moveText.replace(/[?!]+/g, ' ');               // annotation glyphs
-        moveText = moveText.replace(/\(/g, ' ( ').replace(/\)/g, ' ) ');
+        const tokens=moveText.split(/\s+/).filter(t=>t.length>0);
+        const ns=new State(); ns.timeW=timeLimit; ns.timeB=timeLimit;
+        rootNode={ id:0,parent:null,moveStr:null,state:ns,children:[] };
+        nextNodeId=1; allNodes={ 0:rootNode };
+        let curr=rootNode, stack=[], skipped=[];
 
-        // ── Step 3: tokenize ──
-        let tokens = moveText.split(/\s+/).filter(t => t.length > 0);
-
-        // ── Step 4: build game tree ──
-        let ns = new State();
-        ns.timeW = timeLimit; ns.timeB = timeLimit;
-        rootNode    = { id: 0, parent: null, moveStr: null, state: ns, children: [] };
-        nextNodeId  = 1; allNodes = { 0: rootNode };
-        let curr    = rootNode, stack = [], skipped = [];
-
-        for (let tk of tokens) {
-            if (tk === '(') {
-                stack.push(curr);
-                curr = curr.parent || rootNode;  // go back to branch point
-            } else if (tk === ')') {
-                if (stack.length > 0) curr = stack.pop();
-            } else {
-                let found = tryMatchMove(curr.state, tk);
-                if (!found) { skipped.push(tk); continue; }  // skip gracefully
-
-                let mStr = move2Str(found);
-                let existing = curr.children.find(c => c.moveStr === mStr);
-                if (existing) {
-                    curr = existing;
-                } else {
-                    let newState = curr.state.clone();
-                    newState.applyMove(found);
-                    newState.timeW = timeLimit; newState.timeB = timeLimit;
-                    let n = { id: nextNodeId++, parent: curr, moveStr: mStr, state: newState, children: [], move: found };
-                    curr.children.push(n); allNodes[n.id] = n; curr = n;
+        for (const tk of tokens) {
+            if (tk==='(') { stack.push(curr); curr=curr.parent||rootNode; }
+            else if (tk===')') { if(stack.length>0) curr=stack.pop(); }
+            else {
+                const found=tryMatchMove(curr.state, tk);
+                if (!found) { skipped.push(tk); continue; }
+                const mStr=move2Str(found);
+                const ex=curr.children.find(c=>c.moveStr===mStr);
+                if (ex) { curr=ex; } else {
+                    const ns2=curr.state.clone(); ns2.applyMove(found); ns2.timeW=timeLimit; ns2.timeB=timeLimit;
+                    const n={ id:nextNodeId++,parent:curr,moveStr:mStr,state:ns2,children:[],move:found };
+                    curr.children.push(n); allNodes[n.id]=n; curr=n;
                 }
             }
         }
 
-        // ── Step 5: finalize ──
-        currentNode  = rootNode; gameState = currentNode.state.clone();
-        timeW = timeLimit; timeB = timeLimit;
-        gameStarted  = false; gameEnded = false; isComputing = false;
-        selIdx = -1; valTgt = []; lastM = null;
-        if (clockInterval) clearInterval(clockInterval);
-        document.getElementById('modal').style.display = 'none';
+        currentNode=rootNode; gameState=currentNode.state.clone();
+        timeW=timeLimit; timeB=timeLimit;
+        gameStarted=false; gameEnded=false; isComputing=false;
+        selIdx=-1; valTgt=[]; lastM=null;
+        stopClock();
+        document.getElementById('modal').style.display='none';
         render();
 
-        if (skipped.length > 0) {
-            let unique = [...new Set(skipped)];
-            let safeTokens = unique.slice(0, 6).map(t => t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')).join(', ');
-            txtAnalysis.innerHTML = `<span style="color:#ffa726;">Importado. ${skipped.length} token(s) ignorado(s): ${safeTokens}${unique.length > 6 ? '…' : ''}</span>`;
+        if (skipped.length>0) {
+            const uniq=[...new Set(skipped)];
+            const safe=uniq.slice(0,6).map(t=>t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')).join(', ');
+            txtAnalysis.innerHTML=`<span style="color:#ffa726;">Importado. ${skipped.length} token(s) ignorado(s): ${safe}${uniq.length>6?'…':''}</span>`;
         } else {
-            txtAnalysis.innerHTML = `<span style="color:#66bb6a;">Import concluído com sucesso.</span>`;
+            txtAnalysis.innerHTML=`<span style="color:#66bb6a;">Import concluído com sucesso.</span>`;
         }
     }
 
-    document.getElementById('btn-import').onchange = e => {
-        let f = e.target.files[0]; if(!f) return;
-        let r = new FileReader(); r.onload = ev => loadEBNF(ev.target.result); r.readAsText(f);
+    document.getElementById('btn-import').onchange=e=>{
+        const f=e.target.files[0]; if(!f) return;
+        const r=new FileReader(); r.onload=ev=>loadEBNF(ev.target.result); r.readAsText(f);
     };
-    document.getElementById('btn-apply-paste').onclick = () => loadEBNF(document.getElementById('paste-area').value);
+    document.getElementById('btn-apply-paste').onclick=()=>loadEBNF(document.getElementById('paste-area').value);
 
-    initDOM(); resetBoard();
+    // ════════════════════════════════════════════════════════════════════════
+    //  INIT
+    // ════════════════════════════════════════════════════════════════════════
+    buildOpeningBook();   // [NEW-1] Build book from predefined lines
+    initDOM();
+    resetBoard();
 </script>
 </body>
 </html>

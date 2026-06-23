@@ -1316,7 +1316,8 @@
 
         if (skipped.length > 0) {
             let unique = [...new Set(skipped)];
-            txtAnalysis.innerHTML = `<span style="color:#ffa726;">Importado. ${skipped.length} token(s) ignorado(s): ${unique.slice(0, 6).join(', ')}${unique.length > 6 ? '…' : ''}</span>`;
+            let safeTokens = unique.slice(0, 6).map(t => t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')).join(', ');
+            txtAnalysis.innerHTML = `<span style="color:#ffa726;">Importado. ${skipped.length} token(s) ignorado(s): ${safeTokens}${unique.length > 6 ? '…' : ''}</span>`;
         } else {
             txtAnalysis.innerHTML = `<span style="color:#66bb6a;">Import concluído com sucesso.</span>`;
         }

@@ -36,9 +36,9 @@
             --text-secondary: #8591a8;
             --text-muted:     #48526a;
 
-            --sq-light:       #e9d7ac;
-            --sq-dark:        #6b3d1b;
-            --board-border:   #221005;
+            --sq-light:       #e8d5a3;
+            --sq-dark:        #63381a;
+            --board-border:   #1a0d04;
 
             --radius-sm:      5px;
             --radius-md:      9px;
@@ -176,17 +176,17 @@
                 inset 0 -2px 4px rgba(0,0,0,0.22);
         }
 
-        /* Black piece */
+        /* Black piece — matte tournament finish */
         .piece.black {
-            background: radial-gradient(circle at 32% 28%,
-                #4a4a4a 0%, #2a2a2a 40%, #141414 70%, #0a0a0a 100%);
-            border: 2px solid rgba(85,82,78,0.65);
+            background: radial-gradient(circle at 38% 34%,
+                #282828 0%, #1a1a1a 45%, #111111 72%, #0a0a0a 100%);
+            border: 2px solid rgba(60,57,54,0.75);
             box-shadow:
-                0 5px 12px rgba(0,0,0,0.7),
-                0 1px 4px rgba(0,0,0,0.5),
-                inset 0 2px 3px rgba(160,155,148,0.16),
-                inset 0 -2px 4px rgba(0,0,0,0.42),
-                0 0 0 1px rgba(110,105,98,0.30);
+                0 5px 14px rgba(0,0,0,0.75),
+                0 1px 4px rgba(0,0,0,0.55),
+                inset 0 1px 2px rgba(120,116,110,0.08),
+                inset 0 -2px 4px rgba(0,0,0,0.50),
+                0 0 0 1px rgba(80,76,72,0.22);
         }
 
         /* ── King crown — large and dominant ─────────────────────────────── */
@@ -2007,7 +2007,9 @@
     document.getElementById('cfg-mode').onchange=e=>{
         cfgMode=parseInt(e.target.value);
         cfgView=(cfgMode===MODE_MVH)?'B':'W'; document.getElementById('cfg-view').value=cfgView;
-        render(); if(gameStarted) loop();
+        render();
+        // NOTE: intentionally no loop() call here.
+        // CPU execution is only triggered by the ▶ Iniciar / Continuar button (resumeGame).
     };
     document.getElementById('cfg-view').onchange    =e=>{ cfgView=e.target.value; render(); };
     document.getElementById('cfg-depth').onchange   =e=>{ cfgDepth=parseInt(e.target.value); if(isAnalysisOn&&gameStarted) runAna(); };
@@ -2018,7 +2020,12 @@
             render();
         }
     };
-    document.getElementById('cfg-analysis').onchange=e=>{ isAnalysisOn=e.target.checked; selIdx=-1; valTgt=[]; render(); if(gameStarted) loop(); };
+    document.getElementById('cfg-analysis').onchange=e=>{
+        isAnalysisOn=e.target.checked; selIdx=-1; valTgt=[]; render();
+        // Run analysis immediately when toggled on, but never trigger CPU execution.
+        const isCPU=(cfgMode===MODE_HVM&&gameState.turn===-1)||(cfgMode===MODE_MVH&&gameState.turn===1)||cfgMode===MODE_MVM;
+        if(gameStarted && !gameEnded && isAnalysisOn && !isCPU) runAna();
+    };
 
     document.getElementById('btn-resume').onclick =resumeGame;
     document.getElementById('btn-reset').onclick  =resetBoard;

@@ -2,8 +2,16 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DraughtsMind</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+    <title>DraughtsMind — Damas Brasileiras</title>
+    <meta name="description" content="DraughtsMind v20 — Elite Brazilian Draughts engine. Play against a powerful AI with opening book, iterative deepening, alpha-beta, TT, and more.">
+    <meta name="robots" content="index, follow">
+    <meta property="og:title" content="DraughtsMind — Damas Brasileiras">
+    <meta property="og:description" content="Elite Brazilian Draughts AI engine. Full offline, no install required.">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="DraughtsMind">
+    <meta name="twitter:description" content="Elite Brazilian Draughts AI — play directly in your browser.">
     <style>
         /* ── Design System ────────────────────────────────────────────────── */
         :root {
@@ -36,9 +44,11 @@
             --text-secondary: #8591a8;
             --text-muted:     #48526a;
 
-            --sq-light:       #f0f3e3;
-            --sq-dark:        #2cb263;
-            --board-border:   #2cb263;
+            --sq-light:       #f2f5e4;
+            --sq-dark:        #2ab45f;
+            --sq-dark-hover:  #31cc6e;
+            --board-border:   #228b4a;
+            --board-border-hi: #2cb263;
 
             --radius-sm:      5px;
             --radius-md:      9px;
@@ -92,6 +102,7 @@
             padding-bottom: 100%;
             position: relative;
             width: 100%;
+            filter: drop-shadow(0 8px 32px rgba(0,0,0,0.55));
         }
 
         .board {
@@ -99,15 +110,18 @@
             display: grid;
             grid-template-columns: repeat(8, 12.5%);
             grid-template-rows: repeat(8, 12.5%);
-            border: 18px solid var(--board-border);
-            outline: 1.5px solid rgba(255,255,255,0.6);
-            outline-offset: -18px;
+            border: 20px solid var(--board-border);
+            outline: 2px solid rgba(255,255,255,0.55);
+            outline-offset: -20px;
             background-color: var(--sq-dark);
-            border-radius: var(--radius-sm);
+            border-radius: 4px;
             box-shadow:
-                0 8px 24px rgba(0,0,0,0.55),
-                0 2px 6px rgba(0,0,0,0.3),
-                inset 0 0 0 1px rgba(0,0,0,0.4);
+                0 0 0 1px rgba(0,0,0,0.7),
+                0 4px 12px rgba(0,0,0,0.5),
+                0 16px 40px rgba(0,0,0,0.6),
+                0 32px 64px rgba(0,0,0,0.35),
+                inset 0 1px 0 rgba(255,255,255,0.08),
+                inset 0 0 0 1px rgba(0,0,0,0.5);
             transition: transform var(--t-slow);
         }
 
@@ -125,29 +139,36 @@
 
         .sq-dark.highlight {
             box-shadow:
-                inset 0 0 0 clamp(3px, 0.8vw, 6px) #fff,
-                inset 0 0 0 clamp(5px, 1.3vw, 10px) #4ade80;
+                inset 0 0 0 clamp(3px, 0.8vw, 6px) rgba(255,255,255,0.95),
+                inset 0 0 0 clamp(6px, 1.5vw, 11px) #4ade80,
+                inset 0 0 14px rgba(74,222,128,0.25);
         }
         .sq-dark.suggestion {
-            background-color: #2cb263;
+            background-color: #29b35d;
         }
         .sq-dark.suggestion::after {
             content: '';
             position: absolute; top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            width: 33%; height: 33%;
+            width: 35%; height: 35%;
             border-radius: 50%;
-            background: rgba(255,255,255,0.82);
-            box-shadow: 0 0 6px rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.88);
+            box-shadow:
+                0 0 8px rgba(255,255,255,0.6),
+                0 1px 3px rgba(0,0,0,0.2);
             pointer-events: none;
         }
         .sq-dark.capture-hint {
-            background-color: rgba(239, 68, 68, 0.28);
-            box-shadow: inset 0 0 0 2px rgba(239,68,68,0.65);
+            background-color: rgba(239, 68, 68, 0.32);
+            box-shadow:
+                inset 0 0 0 2px rgba(239,68,68,0.75),
+                inset 0 0 10px rgba(239,68,68,0.15);
         }
         .sq-dark.last-move {
-            box-shadow: inset 0 0 0 clamp(2px, 0.5vw, 4px) var(--gold-bright);
-            background-color: #34a86a;
+            box-shadow:
+                inset 0 0 0 clamp(2px, 0.5vw, 4px) var(--gold-bright),
+                inset 0 0 12px rgba(212,168,67,0.18);
+            background-color: #33a868;
         }
 
         /* ── Pieces ───────────────────────────────────────────────────────── */
@@ -169,24 +190,32 @@
 
         /* White piece — marfim fosco, estilo peça física clássica */
         .piece.white {
-            background: radial-gradient(circle at 35% 32%, #ffffff 0%, #f4f4ec 40%, #e6e6da 75%, #d8d8cc 100%);
-            border: 1.5px solid #bcbcb0;
+            background:
+                radial-gradient(circle at 38% 30%, rgba(255,255,255,0.95) 0%, rgba(248,248,242,0.0) 55%),
+                radial-gradient(circle at 35% 32%, #ffffff 0%, #f4f4ec 38%, #e4e4d8 70%, #d4d4c8 100%);
+            border: 1.5px solid #b8b8ac;
             box-shadow:
-                inset 0 2px 4px rgba(255,255,255,0.8),
-                inset 0 -2px 3px rgba(0,0,0,0.10),
-                0 3px 6px rgba(0,0,0,0.22),
-                0 1px 2px rgba(0,0,0,0.12);
+                inset 0 2px 5px rgba(255,255,255,0.9),
+                inset 0 -3px 4px rgba(0,0,0,0.13),
+                inset 0 0 0 1px rgba(0,0,0,0.04),
+                0 2px 4px rgba(0,0,0,0.18),
+                0 4px 10px rgba(0,0,0,0.22),
+                0 1px 2px rgba(0,0,0,0.10);
         }
 
         /* Red piece — vermelho fosco clássico, sem neon nem plástico */
         .piece.black {
-            background: radial-gradient(circle at 35% 32%, #d94848 0%, #c03535 42%, #a82828 72%, #962020 100%);
-            border: 1.5px solid #7e1818;
+            background:
+                radial-gradient(circle at 38% 30%, rgba(255,120,120,0.35) 0%, rgba(255,100,100,0.0) 52%),
+                radial-gradient(circle at 35% 32%, #d64545 0%, #be3232 40%, #a62626 70%, #931e1e 100%);
+            border: 1.5px solid #7a1515;
             box-shadow:
-                inset 0 2px 4px rgba(255,160,160,0.22),
-                inset 0 -2px 3px rgba(0,0,0,0.18),
-                0 3px 6px rgba(0,0,0,0.28),
-                0 1px 2px rgba(0,0,0,0.14);
+                inset 0 2px 5px rgba(255,160,160,0.28),
+                inset 0 -3px 4px rgba(0,0,0,0.22),
+                inset 0 0 0 1px rgba(0,0,0,0.08),
+                0 2px 4px rgba(0,0,0,0.25),
+                0 4px 10px rgba(0,0,0,0.30),
+                0 1px 2px rgba(0,0,0,0.15);
         }
 
         /* ── King crown — large and dominant ─────────────────────────────── */
@@ -593,8 +622,10 @@
             align-items: center;
             justify-content: center;
             font-size: 10px;
-            font-weight: bold;
-            color: rgba(255,255,255,0.95);
+            font-weight: 700;
+            color: rgba(255,255,255,0.92);
+            text-shadow: 0 1px 3px rgba(0,0,0,0.7), 0 0 6px rgba(0,0,0,0.5);
+            letter-spacing: 0.04em;
         }
     </style>
 </head>
@@ -798,7 +829,7 @@
 //  [VIS-V17-7]  Crown da dama ligeiramente maior e com filtro drop-shadow melhor.
 // ══════════════════════════════════════════════════════════════════════════════
 
-    const ENGINE_VERSION = "19.0.0";
+    const ENGINE_VERSION = "20.0.0";
     const EMPTY = 0, W_MAN = 1, B_MAN = -1, W_KING = 2, B_KING = -2;
     const MODE_HVH = 0, MODE_HVM = 1, MODE_MVH = 2, MODE_MVM = 3, MODE_SAND = 4;
 
@@ -830,27 +861,27 @@
     })();
     function getPieceIdx(p) { return p===W_MAN?0: p===B_MAN?1: p===W_KING?2: 3; }
 
-    // ── [EVAL-V16-13] King PST aprimorada — diagonal grande a1-h8 premium
+    // ── [EVAL-V20-2] King PST aprimorada — centro reforçado, diagonais longas premium
     const KING_CTR = [
-        8,0,5,0,5,0,5,0,
-        0,7,0,6,0,5,0,5,
-        5,0,9,0,7,0,6,0,
-        0,6,0,10,0,8,0,6,
-        5,0,8,0,10,0,6,0,
-        0,6,0,7,0,9,0,5,
-        5,0,5,0,6,0,7,0,
-        0,5,0,5,0,5,0,8
+        7,0,4,0,4,0,4,0,
+        0,8,0,7,0,6,0,5,
+        4,0,10,0,8,0,7,0,
+        0,7,0,12,0,10,0,7,
+        4,0,10,0,12,0,8,0,
+        0,7,0,8,0,10,0,4,
+        5,0,6,0,7,0,8,0,
+        0,4,0,4,0,4,0,7
     ];
 
-    // ── [EVAL-V16-14] Man PST melhorada
+    // ── [EVAL-V20-1] Man PST aprimorada — centro mais forte, bordas penalizadas
     const MAN_ADV_W = [
-        2,0,2,0,2,0,2,0,
-        0,4,0,5,0,5,0,4,
-        5,0,7,0,7,0,7,0,
-        0,9,0,10,0,10,0,9,
-        10,0,12,0,12,0,10,0,
-        0,14,0,15,0,15,0,14,
-        17,0,18,0,18,0,17,0,
+        0,0,0,0,0,0,0,0,
+        0,3,0,4,0,4,0,3,
+        4,0,6,0,7,0,6,0,
+        0,8,0,11,0,11,0,8,
+        9,0,13,0,13,0,11,0,
+        0,14,0,16,0,16,0,14,
+        16,0,19,0,19,0,18,0,
         0,0,0,0,0,0,0,0
     ];
     const MAN_ADV_B = new Array(64);

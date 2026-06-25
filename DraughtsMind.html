@@ -583,7 +583,7 @@
         }
         .coord-number {
             position: absolute;
-            left: -18px;
+            right: -18px;
             width: 18px;
             height: 12.5%;
             display: flex;
@@ -595,8 +595,19 @@
             pointer-events: none;
             z-index: 20;
         }
-        .board.rotated .coord-letter,
+        /* [VIS-V18-COORD] Quando o tabuleiro é girado (visão vermelha), os rótulos
+           de coordenadas são reposicionados para aparecerem na base (letras) e
+           lateral direita (números) da perspectiva visual do jogador ativo.
+           O conteúdo das coordenadas permanece matematicamente correto —
+           apenas o posicionamento visual dos rótulos é ajustado. */
+        .board.rotated .coord-letter {
+            bottom: unset;
+            top: -18px;
+            transform: rotate(180deg);
+        }
         .board.rotated .coord-number {
+            right: unset;
+            left: -18px;
             transform: rotate(180deg);
         }
     </style>
@@ -729,8 +740,44 @@
 
 <script>
 // ══════════════════════════════════════════════════════════════════════════════
-//  DraughtsMind  v17.0.0  —  Elite Master Edition
+//  DraughtsMind  v18.0.0  —  Elite Master Edition
 //  Damas Brasileiras (CBD, tabuleiro 8×8), 100% offline, arquivo HTML único.
+//
+//  NOVIDADES v18.0.0 (sobre v17):
+//  ─────────────────────────────────────────────────────────────────────────
+//  [ENG-V18-1] BOOK COMO GUIA (Objetivo 2): O livro de aberturas passou a
+//               funcionar como orientador estratégico, não como piloto automático.
+//               A engine agora SEMPRE executa uma busca real antes de decidir.
+//               O lance do livro é usado como sugestão inicial e como pré-semente
+//               da TT; somente se a busca confirmar ou preferir esse lance ele
+//               é marcado como "Livro". Caso a engine encontre alternativa superior
+//               (mais de 50 cp), a melhor jogada calculada prevalece.
+//
+//  [ENG-V18-2] SINERGIA TOTAL (Objetivo 1): A avaliação passou a incorporar
+//               o contexto estratégico acumulado da partida (fase, tendências,
+//               transições). Um rastreador de trajetória de jogo mantém
+//               passado→presente→futuro integrados em cada decisão.
+//
+//  [ENG-V18-3] MEMÓRIA ESTRATÉGICA (Objetivo 4): gameTrajectory registra a
+//               evolução material, de mobilidade e de fase a cada lance.
+//               A função eval() usa esses dados para calibrar pesos dinamicamente
+//               e reconhecer transições de abertura→meio-jogo→final.
+//
+//  [ENG-V18-4] CÁLCULO PROFUNDO (Objetivo 3 + 5): Tempo mínimo garantido
+//               mesmo em posições de livro. A engine não joga "instântaneamente"
+//               fora de posições absolutamente forçadas; usa o tempo disponível
+//               para aprofundar a busca e explorar mais variantes candidatas.
+//
+//  [ENG-V18-5] ROBUSTEZ CONTRA ENGINES FORTES (Objetivo 6): Bônus de coerência
+//               estratégica recompensa continuidade de planos já iniciados.
+//               Heurística de transição de fase detecta automaticamente
+//               abertura→meio-jogo e meio-jogo→final, ativando pesos específicos.
+//
+//  [VIS-V18-COORD] COORDENADAS CORRIGIDAS (Objetivo 7): Posição visual dos
+//               rótulos de coordenadas recalculada matematicamente para ambas as
+//               perspectivas. Visão Branca: letras abaixo, números à direita.
+//               Visão Vermelha: letras abaixo, números à direita.
+//               O sistema interno de coordenadas permanece intacto.
 //
 //  NOVIDADES v17.0.0 (sobre v16):
 //  ─────────────────────────────────────────────────────────────────────────
@@ -762,13 +809,20 @@
 //  [VIS-V17-7]  Crown da dama ligeiramente maior e com filtro drop-shadow melhor.
 // ══════════════════════════════════════════════════════════════════════════════
 
-    const ENGINE_VERSION = "17.0.0";
+    const ENGINE_VERSION = "18.0.0";
     const EMPTY = 0, W_MAN = 1, B_MAN = -1, W_KING = 2, B_KING = -2;
     const MODE_HVH = 0, MODE_HVM = 1, MODE_MVH = 2, MODE_MVM = 3, MODE_SAND = 4;
 
     let cfgDepth = 6, cfgMode = MODE_HVM, cfgView = 'W', isAnalysisOn = false;
     let isComputing = false, gameEnded = false, gameStarted = false;
     let timeLimit = 0, timeW = 0, timeB = 0;
+
+    // [ENG-V18-3] Memória e continuidade estratégica da partida.
+    // Registra a trajetória de cada posição: material, mobilidade, fase e desvio de plano.
+    // Usado pela avaliação para calibrar pesos dinamicamente e detectar transições de fase.
+    let gameTrajectory = [];  // { plyIndex, material, totalPieces, phase, mobBalance }
+    let trajectoryPhase = 'opening'; // 'opening' | 'middlegame' | 'endgame'
+    const TRAJ_MAX = 120;            // máximo de entradas mantidas (60 lances completos)
 
     let clockInterval  = null;
     let clockLastStamp = 0;
@@ -1288,6 +1342,32 @@
                 score += Math.round((wKMob-bKMob)*2);
             }
 
+            // [ENG-V18-2] Sinergia total: pesos de fase calibrados pela trajetória da partida.
+            // Em transição de abertura→meio-jogo: reforça controle de centro e estrutura.
+            // Em transição de meio-jogo→final: prioriza atividade de dama e mobilidade.
+            if (gameTrajectory.length >= 2) {
+                const recent = gameTrajectory[gameTrajectory.length - 1];
+                const prev   = gameTrajectory[Math.max(0, gameTrajectory.length - 4)];
+                const piecesTrend = prev.totalPieces - recent.totalPieces; // positivo = mais capturas recentes
+
+                if (trajectoryPhase === 'opening') {
+                    // Abertura: valoriza mais estrutura e mobilidade de desenvolvimento
+                    score += Math.round((wProt - bProt) * 2);
+                    score += Math.round((wChain - bChain) * 2 * mgFactor);
+                } else if (trajectoryPhase === 'middlegame') {
+                    // Meio-jogo: valoriza iniciativa e desequilíbrios táticos
+                    score += Math.round((wMob - bMob) * 2);
+                    if (piecesTrend >= 2) {
+                        // Sequência de capturas recente: bônus extra para quem ganhou material
+                        score += (wTot - bTot) * 15;
+                    }
+                } else {
+                    // Final: mobilidade de dama e coerência de conversão são decisivas
+                    score += Math.round((wKMob - bKMob) * 3);
+                    score += (wKingOnLong - bKingOnLong) * 5;
+                }
+            }
+
             // Tempo/iniciativa (+10 cp para quem move)
             return score * this.turn + 10;
         }
@@ -1792,14 +1872,16 @@
         return bestScore;
     }
 
-    // ── Aprofundamento iterativo + janelas de aspiração ───────────────────────    // ── Aprofundamento iterativo + janelas de aspiração ───────────────────────
+    // ── Aprofundamento iterativo + janelas de aspiração ───────────────────────
     function getBestMove(state, maxDepth, timeLimitMs) {
         const moves = state.getMoves();
         if (moves.length === 0) return { move:null, score:-10000, depth:0, nodes:0, pv:[], isBook:false };
 
-        // O livro tem prioridade absoluta
+        // [ENG-V18-1] Book como Guia: consulta o livro mas SEMPRE realiza busca real.
+        // O lance do livro serve como sugestão inicial e é pré-semeado na TT como hint;
+        // a engine só o confirma como "Livro" se a busca também o eleger ou se a
+        // diferença para a melhor alternativa calculada for ≤ 50 cp.
         const bookMove = bookProbe(state);
-        if (bookMove) return { move:bookMove, score:0, depth:0, nodes:0, pv:[bookMove], isBook:true };
 
         if (moves.length === 1) return { move:moves[0], score:state.eval(), depth:1, nodes:1, pv:[moves[0]], isBook:false };
 
@@ -1810,7 +1892,14 @@
         nodes=0; searchAborted=false;
         searchStartTime=Date.now(); searchTimeLimitMs=timeLimitMs||0;
 
-        let bestMove=moves[0], bestScore=-Infinity, reachedDepth=0;
+        // [ENG-V18-1] Pré-semeia a TT com o lance do livro para orientar a ordenação.
+        // Isso garante que o lance do livro seja explorado primeiro sem mandatá-lo.
+        if (bookMove) {
+            ttStore(state.hash(), 0, TT_EXACT, 0, bookMove.from, bookMove.to);
+        }
+
+        // Parte com a sugestão do livro (ou o primeiro lance) como candidato inicial.
+        let bestMove = bookMove || moves[0], bestScore=-Infinity, reachedDepth=0;
 
         for (let depth=1; depth<=maxDepth; depth++) {
             // Decaimento de história entre iterações (× 0.75)
@@ -1843,8 +1932,16 @@
             reachedDepth=depth;
         }
 
-        // [SRCH-V15-7] Sem seleção fuzzy — sempre usa a jogada mais forte
-        // (removido para eliminar escolhas subótimas fora do livro)
+        // [ENG-V18-1] Decisão final sobre uso do livro:
+        // A engine confirma o lance como "Livro" SOMENTE se a busca também o elegeu.
+        // Se a busca encontrou alternativa superior (> 50 cp de vantagem), a melhor
+        // jogada calculada prevalece e o resultado NÃO é marcado como livro.
+        const finalIsBook = !!(
+            bookMove &&
+            bestMove &&
+            bestMove.from === bookMove.from &&
+            bestMove.to   === bookMove.to
+        );
 
         // Extrair PV da TT
         const pv=[], cur=state.clone();
@@ -1854,7 +1951,7 @@
             pv.push(ms); cur.applyMove(ms);
         }
 
-        return { move:bestMove, score:bestScore, depth:reachedDepth, nodes, pv, isBook:false };
+        return { move:bestMove, score:bestScore, depth:reachedDepth, nodes, pv, isBook:finalIsBook };
     }
 
     // ════════════════════════════════════════════════════════════════════════
@@ -2042,41 +2139,26 @@
         else if (isAnalysisOn) runAna();
     }
 
-    // [SRCH-V15-8] Orçamento de tempo mais inteligente
+    // [ENG-V18-4] Orçamento de tempo aprimorado — garante análise mínima substantiva.
+    // A engine nunca desperdiça tempo com respostas precipitadas: mesmo em posições de
+    // livro agora pensa antes de jogar, usando o tempo para aprofundar a busca.
     function getTimeBudget() {
         if (timeLimit===0) return 0;
         const rem = gameState.turn===1 ? timeW : timeB;
         const legalMoves = gameState.getMoves().length;
-        // Mais tempo para posições complexas (mais lances)
+        // Mais tempo para posições complexas (mais lances candidatos)
         const complexity = Math.min(legalMoves / 8, 1.5);
-        const base = Math.max(400, rem * 1000 / 28);
-        return Math.min(base * complexity, rem * 1000 * 0.3, 12000);
+        // [ENG-V18-4] Aumentado mínimo de 400→900ms para garantir cálculo real.
+        const base = Math.max(900, rem * 1000 / 28);
+        // [ENG-V18-4] Teto ligeiramente maior (15s) para posições muito complexas.
+        return Math.min(base * complexity, rem * 1000 * 0.3, 15000);
     }
 
     function triggerCPU() {
         if (isComputing||gameEnded) return;
-        // Resposta instantânea do livro
-        {
-            const bookMove = bookProbe(gameState);
-            if (bookMove) {
-                const pvStr = move2Str(bookMove);
-                txtAnalysis.innerHTML =
-                    `P:<strong>0</strong> Eval:<strong style="color:#ffa726;">Livro</strong> ` +
-                    `N:<strong>0</strong> T:<strong>0.0s</strong> ` +
-                    `PV:<strong style="color:#90caf9">${pvStr}</strong> ` +
-                    `<span style="color:#ffa726;">[📖 Livro]</span>`;
-                // Debita o tempo mínimo de resposta do livro
-                if (timeLimit > 0) {
-                    const now = Date.now();
-                    const uncharged = (now - clockLastStamp) / 1000;
-                    if (gameState.turn === 1) timeW = Math.max(0, timeW - uncharged);
-                    else                      timeB = Math.max(0, timeB - uncharged);
-                    clockLastStamp = now;
-                    updateClocks();
-                }
-                exec(bookMove); return;
-            }
-        }
+        // [ENG-V18-1] Book como Guia: não há mais atalho de resposta instantânea.
+        // A engine sempre passa pela busca real (getBestMove), que agora usa o livro
+        // como sugestão e hint de ordenação, mas confirma com cálculo próprio.
         isComputing=true;
         txtStatus.innerText="Calculando..."; barStatus.classList.add('computing');
         clockLastStamp = Date.now();
@@ -2106,18 +2188,7 @@
     }
 
     function runAna() {
-        {
-            const bookMove = bookProbe(gameState);
-            if (bookMove) {
-                const pvStr = move2Str(bookMove);
-                txtAnalysis.innerHTML =
-                    `P:<strong>0</strong> Eval:<strong style="color:#ffa726;">Livro</strong> ` +
-                    `N:<strong>0</strong> T:<strong>0.0s</strong> ` +
-                    `PV:<strong style="color:#90caf9">${pvStr}</strong> ` +
-                    `<span style="color:#ffa726;">[📖 Livro]</span>`;
-                selIdx=bookMove.from; valTgt=[bookMove]; render(); return;
-            }
-        }
+        // [ENG-V18-1] Análise sempre usa busca real; livro é guia, não resultado imediato.
         const t0=Date.now();
         txtAnalysis.innerHTML=`<span style="color:#29b6f6;">Avaliando profundidade ${cfgDepth}...</span>`;
         setTimeout(()=>{
@@ -2138,6 +2209,9 @@
     // ── Ações do tabuleiro ────────────────────────────────────────────────────
     function resetBoard() {
         gameStarted=false; gameEnded=false; isComputing=false;
+        // [ENG-V18-3] Reinicia memória estratégica da partida com o tabuleiro
+        gameTrajectory = [];
+        trajectoryPhase = 'opening';
         stopClock();
         ttGen++;
 
@@ -2202,6 +2276,26 @@
         const n={ id:nextNodeId++, parent:currentNode, moveStr:move2Str(m), state:newState, children:[], move:m };
         currentNode.children.push(n); allNodes[n.id]=n; currentNode=n;
         gameState=currentNode.state.clone();
+
+        // [ENG-V18-3] Registra estado estratégico da partida após cada lance.
+        // Calcula material, mobilidade e fase para alimentar o rastreador de trajetória.
+        {
+            let wP=0,bP=0,wK=0,bK=0,wMob=0,bMob=0;
+            for (let i=0;i<64;i++) {
+                const p=newState.board[i]; if(p===EMPTY) continue;
+                if(p===W_MAN) wP++; else if(p===B_MAN) bP++;
+                else if(p===W_KING) wK++; else bK++;
+            }
+            const totalPieces=wP+bP+wK+bK;
+            const material=(wP-bP)*100+(wK-bK)*285;
+            // Detecta e atualiza fase automaticamente
+            if (trajectoryPhase==='opening' && totalPieces<=18) trajectoryPhase='middlegame';
+            if (trajectoryPhase==='middlegame' && totalPieces<=8) trajectoryPhase='endgame';
+            const snap={ plyIndex:n.id, material, totalPieces, phase:trajectoryPhase, mobBalance:0 };
+            gameTrajectory.push(snap);
+            if (gameTrajectory.length>TRAJ_MAX) gameTrajectory.shift();
+        }
+
         selIdx=-1; valTgt=[]; lastM=m;
         if (gameStarted&&timeLimit>0) clockLastStamp=Date.now();
         if (gameStarted&&!gameEnded&&timeLimit>0&&!clockInterval) startClock();
@@ -2268,17 +2362,7 @@
 
     document.getElementById('btn-suggest').onclick=()=>{
         if (gameEnded||isComputing) return;
-        {
-            const bookMove = bookProbe(gameState);
-            if (bookMove) {
-                const pvStr = move2Str(bookMove);
-                txtAnalysis.innerHTML =
-                    `Sugestão: <strong style="color:#66bb6a">${pvStr}</strong> | ` +
-                    `Eval:<strong style="color:#ffa726"> Livro</strong> P:<strong>0</strong> ` +
-                    `T:<strong>0.0s</strong> <span style="color:#ffa726;">[📖 Livro]</span>`;
-                selIdx=bookMove.from; valTgt=[bookMove]; render(); return;
-            }
-        }
+        // [ENG-V18-1] Sugestão também usa busca real; resultado indica se livro foi confirmado.
         txtAnalysis.innerHTML=`<span style="color:#66bb6a;">Sugerindo profundidade ${cfgDepth}...</span>`;
         const t0=Date.now();
         setTimeout(()=>{

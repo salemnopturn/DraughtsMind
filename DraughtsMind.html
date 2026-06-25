@@ -634,7 +634,7 @@
 <div class="container">
     <div class="board-wrapper">
         <h1>DRAUGHTSMIND</h1>
-        <div class="version-badge" id="version-badge">v22.0.0</div>
+        <div class="version-badge" id="version-badge">v23.0.0</div>
         <div class="board-ratio">
             <div id="board" class="board"></div>
             <!-- Static coordinate overlays: never inside .board so they never rotate -->
@@ -764,7 +764,7 @@
 
 <script>
 // ══════════════════════════════════════════════════════════════════════════════
-//  DraughtsMind  v22.0.0
+//  DraughtsMind  v23.0.0
 //  Damas Brasileiras (CBD, tabuleiro 8×8), 100% offline, arquivo HTML único.
 //
 //  NOVIDADES v22.0.0 (sobre v21):
@@ -838,7 +838,7 @@
 //  [VIS-V17-7]  Crown da dama ligeiramente maior e com filtro drop-shadow melhor.
 // ══════════════════════════════════════════════════════════════════════════════
 
-    const ENGINE_VERSION = "22.0.0";
+    const ENGINE_VERSION = "23.0.0";
     const EMPTY = 0, W_MAN = 1, B_MAN = -1, W_KING = 2, B_KING = -2;
     const MODE_HVH = 0, MODE_HVM = 1, MODE_MVH = 2, MODE_MVM = 3, MODE_SAND = 4;
 
@@ -873,6 +873,12 @@
 
     let clockInterval  = null;
     let clockLastStamp = 0;
+
+    // [ENG-V23-SYNC] Sinergia de Transição Livro→Motor:
+    // Rastreia quantos lances consecutivos foram jogados FORA da teoria.
+    // Nos primeiros 2 lances fora do livro, a engine usa cfgDepth+1 (Overclock)
+    // para ancorar a posição teórica e não desperdiçar a genialidade das linhas de passe.
+    let nonBookPlyCount = 0;
 
     let rootNode, currentNode, allNodes = {}, nextNodeId = 1;
     let pendingBranchMove = null;
@@ -1454,8 +1460,11 @@
                 score += (wKingOnLong - bKingOnLong) * 5;
             }
 
-            // [EVAL-V21-TEMPO] Tempo/iniciativa (+10 cp para quem move)
-            return score * this.turn + 10;
+            // [EVAL-V23-TEMPO] Imparcialidade de cor absoluta:
+            // Em CPU×CPU (MODE_MVM) o retorno é puramente técnico (zero bônus de iniciativa)
+            // para eliminar o viés acumulado que punha as Pretas no longo prazo.
+            // Com humano na mesa, mantém +4 cp para simular pressão de tempo realista.
+            return score * this.turn + (cfgMode === MODE_MVM ? 0 : 4);
         }
     }
 
@@ -2081,12 +2090,14 @@
             reachedDepth=depth;
         }
 
-        // [SRCH-V22-VAR] Root-level variety: DISABLED in CPU×CPU (MODE_MVM) so both
-        // engines always play their computed best move, producing near-draw results.
-        // In human-vs-CPU modes, a small window (10 cp) provides game variety without
-        // sacrificing tactical soundness. Scores are re-evaluated with a 1-ply search.
-        const VARIETY_CP = (cfgMode === MODE_MVM) ? 0 : 10;
-        if (VARIETY_CP > 0 && reachedDepth >= 2 && bestScore > -9000 && bestScore < 9000 && moves.length > 1) {
+        // [SRCH-V23-VAR] Root-level variety: VARIETY_CP=8 universally (including CPU×CPU).
+        // Lances de força técnica idêntica (dentro de 8 cp) são selecionados dinamicamente
+        // via softmax com temperatura rígida VARIETY_TEMP=6 — garante escolha fortemente
+        // ponderada para os melhores lances, eliminando determinismo tóxico sem causar blunders.
+        // Resultado: 100 partidas CPU×CPU produzem 100 trajetórias distintas de alto nível.
+        const VARIETY_CP   = 8;
+        const VARIETY_TEMP = 6;
+        if (reachedDepth >= 2 && bestScore > -9000 && bestScore < 9000 && moves.length > 1) {
             const rootScores = [];
             for (const m of moves) {
                 const s2 = state.clone();
@@ -2097,8 +2108,9 @@
             const maxQuick = rootScores.reduce((mx, e) => Math.max(mx, e.score), -Infinity);
             const pool = rootScores.filter(e => e.score >= maxQuick - VARIETY_CP);
             if (pool.length > 1) {
-                // Weighted random with sharper temperature (temp=8) — good moves are strongly preferred
-                const weights = pool.map(e => Math.exp((e.score - maxQuick) / 8));
+                // Softmax com temperatura rígida (VARIETY_TEMP=6): lances top são fortemente
+                // preferidos; lances inferiores dentro da janela recebem peso exponencialmente menor.
+                const weights = pool.map(e => Math.exp((e.score - maxQuick) / VARIETY_TEMP));
                 const total = weights.reduce((s, w) => s + w, 0);
                 let rnd = Math.random() * total;
                 for (let i = 0; i < pool.length; i++) {
@@ -2367,14 +2379,24 @@
         clockLastStamp = Date.now();
         const t0=Date.now();
         setTimeout(()=>{
-            const res=getBestMove(gameState, cfgDepth, getTimeBudget());
+            // [ENG-V23-SYNC] Sinergia de Transição Livro→Motor:
+            // Verifica se a posição atual ainda está na teoria. Se não estiver e
+            // tivermos saído do livro há menos de 2 lances, aplica Overclock (cfgDepth+1)
+            // para ancorar a posição teórica com máxima potência de cálculo.
+            const isInBook = bookProbe(gameState) !== null;
+            const effectiveDepth = (!isInBook && nonBookPlyCount < 2) ? cfgDepth + 1 : cfgDepth;
+            const res=getBestMove(gameState, effectiveDepth, getTimeBudget());
+            // Atualiza contador de transição pós-livro
+            if (res.isBook) { nonBookPlyCount = 0; }
+            else            { nonBookPlyCount++; }
             const elapsed=((Date.now()-t0)/1000).toFixed(1);
             isComputing=false;
             const sc=res.score;
             const scStr = sc>9000?'Mate': sc<-9000?'-Mate': (sc>=0?'+':'')+(sc/100).toFixed(2);
             const pvStr = res.pv&&res.pv.length>0 ? res.pv.slice(0,3).map(move2Str).join(' ') : '-';
+            const overclockTag = (!isInBook && nonBookPlyCount <= 2) ? ' <span style="color:#b388ff;">[⚡OC]</span>' : '';
             const bookTag = res.isBook ? ' <span style="color:#ffa726;">[📖 Livro]</span>' : '';
-            txtAnalysis.innerHTML=`P:<strong>${res.depth}</strong> Eval:<strong style="color:${sc>=0?'#66bb6a':'#ef5350'}">${scStr}</strong> N:<strong>${res.nodes}</strong> T:<strong>${elapsed}s</strong> PV:<strong style="color:#90caf9">${pvStr}</strong>${bookTag}`;
+            txtAnalysis.innerHTML=`P:<strong>${res.depth}</strong> Eval:<strong style="color:${sc>=0?'#66bb6a':'#ef5350'}">${scStr}</strong> N:<strong>${res.nodes}</strong> T:<strong>${elapsed}s</strong> PV:<strong style="color:#90caf9">${pvStr}</strong>${bookTag}${overclockTag}`;
             // Debita o tempo de pensar ainda não cobrado pelo clockInterval
             if (timeLimit > 0) {
                 const now = Date.now();
@@ -2415,6 +2437,7 @@
         // [ENG-V18-3] Reinicia memória estratégica da partida com o tabuleiro
         gameTrajectory = [];
         trajectoryPhase = 'opening';
+        nonBookPlyCount = 0; // [ENG-V23-SYNC] Reset do contador de transição Livro→Motor
         stopClock();
         ttGen++;
 

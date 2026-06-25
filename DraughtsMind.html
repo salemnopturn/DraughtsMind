@@ -2030,6 +2030,15 @@
                     `N:<strong>0</strong> T:<strong>0.0s</strong> ` +
                     `PV:<strong style="color:#90caf9">${pvStr}</strong> ` +
                     `<span style="color:#ffa726;">[📖 Livro]</span>`;
+                // Debita o tempo mínimo de resposta do livro
+                if (timeLimit > 0) {
+                    const now = Date.now();
+                    const uncharged = (now - clockLastStamp) / 1000;
+                    if (gameState.turn === 1) timeW = Math.max(0, timeW - uncharged);
+                    else                      timeB = Math.max(0, timeB - uncharged);
+                    clockLastStamp = now;
+                    updateClocks();
+                }
                 exec(bookMove); return;
             }
         }
@@ -2046,6 +2055,17 @@
             const pvStr = res.pv&&res.pv.length>0 ? res.pv.slice(0,3).map(move2Str).join(' ') : '-';
             const bookTag = res.isBook ? ' <span style="color:#ffa726;">[📖 Livro]</span>' : '';
             txtAnalysis.innerHTML=`P:<strong>${res.depth}</strong> Eval:<strong style="color:${sc>=0?'#66bb6a':'#ef5350'}">${scStr}</strong> N:<strong>${res.nodes}</strong> T:<strong>${elapsed}s</strong> PV:<strong style="color:#90caf9">${pvStr}</strong>${bookTag}`;
+            // Debita o tempo de pensar ainda não cobrado pelo clockInterval
+            if (timeLimit > 0) {
+                const now = Date.now();
+                const uncharged = (now - clockLastStamp) / 1000;
+                if (gameState.turn === 1) { timeW = Math.max(0, timeW - uncharged); }
+                else                      { timeB = Math.max(0, timeB - uncharged); }
+                clockLastStamp = now;
+                if (timeW <= 0) { timeW=0; updateClocks(); popModal("Fim de Jogo","Tempo esgotado! Pretas vencem."); return; }
+                if (timeB <= 0) { timeB=0; updateClocks(); popModal("Fim de Jogo","Tempo esgotado! Brancas vencem."); return; }
+                updateClocks();
+            }
             if (res.move) exec(res.move); else render();
         }, 10);
     }

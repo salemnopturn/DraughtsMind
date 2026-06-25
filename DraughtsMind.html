@@ -100,11 +100,14 @@
             grid-template-columns: repeat(8, 12.5%);
             grid-template-rows: repeat(8, 12.5%);
             border: 18px solid var(--board-border);
-            outline: 1px solid rgba(255,255,255,0.55);
+            outline: 1.5px solid rgba(255,255,255,0.6);
             outline-offset: -18px;
             background-color: var(--sq-dark);
             border-radius: var(--radius-sm);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            box-shadow:
+                0 8px 24px rgba(0,0,0,0.55),
+                0 2px 6px rgba(0,0,0,0.3),
+                inset 0 0 0 1px rgba(0,0,0,0.4);
             transition: transform var(--t-slow);
         }
 
@@ -121,25 +124,30 @@
         .sq-dark  { background-color: var(--sq-dark); }
 
         .sq-dark.highlight {
-            box-shadow: inset 0 0 0 clamp(4px, 1vw, 8px) #71cc8c;
+            box-shadow:
+                inset 0 0 0 clamp(3px, 0.8vw, 6px) #fff,
+                inset 0 0 0 clamp(5px, 1.3vw, 10px) #4ade80;
         }
         .sq-dark.suggestion {
-            box-shadow: inset 0 0 0 1px #000000;
             background-color: #2cb263;
         }
         .sq-dark.suggestion::after {
             content: '';
             position: absolute; top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            width: 28%; height: 28%;
+            width: 33%; height: 33%;
             border-radius: 50%;
-            background: #71cc8c;
-            opacity: 0.55;
+            background: rgba(255,255,255,0.82);
+            box-shadow: 0 0 6px rgba(255,255,255,0.5);
             pointer-events: none;
+        }
+        .sq-dark.capture-hint {
+            background-color: rgba(239, 68, 68, 0.28);
+            box-shadow: inset 0 0 0 2px rgba(239,68,68,0.65);
         }
         .sq-dark.last-move {
             box-shadow: inset 0 0 0 clamp(2px, 0.5vw, 4px) var(--gold-bright);
-            background-color: #3aac6c;
+            background-color: #34a86a;
         }
 
         /* ── Pieces ───────────────────────────────────────────────────────── */
@@ -152,25 +160,33 @@
             transition: transform var(--t-fast), box-shadow var(--t-fast);
         }
 
-        .piece:hover  { }
-        .piece:active { transform: scale(0.92); }
+        .piece:hover  { transform: translateY(-2px) scale(1.04); }
+        .piece:active { transform: translateY(0) scale(0.92); }
 
         .board.rotated .piece        { transform: rotate(180deg); }
-        .board.rotated .piece:hover  { transform: rotate(180deg); }
+        .board.rotated .piece:hover  { transform: rotate(180deg) translateY(-2px) scale(1.04); }
         .board.rotated .piece:active { transform: rotate(180deg) scale(0.92); }
 
-        /* White piece */
+        /* White piece — marfim fosco, estilo peça física clássica */
         .piece.white {
-            background: #ffffff;
-            border: 1px solid #cccccc;
-            box-shadow: inset -2px -2px 4px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.25);
+            background: radial-gradient(circle at 35% 32%, #ffffff 0%, #f4f4ec 40%, #e6e6da 75%, #d8d8cc 100%);
+            border: 1.5px solid #bcbcb0;
+            box-shadow:
+                inset 0 2px 4px rgba(255,255,255,0.8),
+                inset 0 -2px 3px rgba(0,0,0,0.10),
+                0 3px 6px rgba(0,0,0,0.22),
+                0 1px 2px rgba(0,0,0,0.12);
         }
 
-        /* Red piece */
+        /* Red piece — vermelho fosco clássico, sem neon nem plástico */
         .piece.black {
-            background: #e20a08;
-            border: 1px solid #c00807;
-            box-shadow: inset -2px -2px 4px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.25);
+            background: radial-gradient(circle at 35% 32%, #d94848 0%, #c03535 42%, #a82828 72%, #962020 100%);
+            border: 1.5px solid #7e1818;
+            box-shadow:
+                inset 0 2px 4px rgba(255,160,160,0.22),
+                inset 0 -2px 3px rgba(0,0,0,0.18),
+                0 3px 6px rgba(0,0,0,0.28),
+                0 1px 2px rgba(0,0,0,0.14);
         }
 
         /* ── King crown — large and dominant ─────────────────────────────── */
@@ -178,26 +194,26 @@
             content: '♛';
             position: absolute;
             top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: clamp(1.5rem, 4.8vmin, 3rem);
+            transform: translate(-50%, -51%);
+            font-size: clamp(1.55rem, 5vmin, 3.1rem);
             line-height: 1;
             pointer-events: none;
-            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.65));
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7));
         }
 
         .piece.white.king::after {
             color: #1e1e1e;
             text-shadow:
-                0 1px 0 rgba(255,255,255,0.9),
-                0 0 10px rgba(0,0,0,0.25);
+                0 1px 0 rgba(255,255,255,0.55),
+                0 0 8px rgba(0,0,0,0.15);
         }
 
         .piece.black.king::after {
             color: var(--gold-bright);
             text-shadow:
-                0 1px 3px rgba(0,0,0,0.9),
-                0 0 14px var(--gold-glow),
-                0 0 28px rgba(212,168,67,0.2);
+                0 1px 3px rgba(0,0,0,0.95),
+                0 0 16px var(--gold-glow),
+                0 0 32px rgba(212,168,67,0.18);
         }
 
         /* ── Controls ─────────────────────────────────────────────────────── */
@@ -590,6 +606,7 @@
 <div class="container">
     <div class="board-wrapper">
         <h1>DRAUGHTSMIND</h1>
+        <div class="version-badge" id="version-badge">ELITE MASTER EDITION</div>
         <div class="board-ratio">
             <div id="board" class="board"></div>
         </div>
@@ -712,44 +729,37 @@
 
 <script>
 // ══════════════════════════════════════════════════════════════════════════════
-//  DraughtsMind  v15.0.0  —  Elite Master Edition
+//  DraughtsMind  v17.0.0  —  Elite Master Edition
 //  Damas Brasileiras (CBD, tabuleiro 8×8), 100% offline, arquivo HTML único.
 //
-//  NOVIDADES v15.0.0 (sobre v14):
+//  NOVIDADES v17.0.0 (sobre v16):
 //  ─────────────────────────────────────────────────────────────────────────
-//  [EVAL-V15-1] Valor da dama reescalado: 285 + (24 - n) * 5 (máx ~405 no final)
-//  [EVAL-V15-2] Squares centrais secundários (e4,d5,c4,f5): +4 cp cada
-//  [EVAL-V15-3] Peças protegidas: 4 cp (era 3 cp)
-//  [EVAL-V15-4] Peças bloqueadas: penalidade -6 cp por pedra sem movimento
-//  [EVAL-V15-5] Âncora de fundo: 5 cp (era 4 cp)
-//  [EVAL-V15-6] Penalidade de borda: 6 cp (era 5 cp)
-//  [EVAL-V15-7] Bônus de tempo/iniciativa: +10 cp (era 6 cp fixo no return)
-//  [EVAL-V15-8] Bônus de avanço para promoção: 12 cp (era 10 cp)
-//  [EVAL-V15-9] Mobilidade de dama qualitativa: controle do centro das diagonais
-//  [EVAL-V15-10] Oposição de damas: detecta distância Chebyshev 1 e 2
-//  [EVAL-V15-11] Confinamento de canto: 24 cp/passo (era 22 cp)
-//  [EVAL-V15-12] Dois reis atacantes em sinergia: +10 cp quando ambos agem juntos
-//  [EVAL-V15-13] PST de damas melhorada: diagonal grande a1-h8 premium
-//  [EVAL-V15-14] PST de pedras melhorada: colunas centrais enfatizadas
+//  [RULE-V17-1] CORREÇÃO CRÍTICA — CBD Art.13 / Regra 7 (Promoção durante captura):
+//               A pedra que, durante o lance de captura de várias peças, APENAS
+//               PASSE pela casa de coroação SEM AÍ PARAR não será promovida a dama.
+//               A promoção ocorre EXCLUSIVAMENTE ao TERMINAR a sequência na coroa.
+//               Durante toda a sequência, a peça continua como PEDRA NORMAL.
+//               Esta regra distingue as Damas Brasileiras das Internacionais (100
+//               casas), onde há promoção mid-sequência. Fontes: cbjd-regras-damas-
+//               010113.pdf (Art.13, Regra 7) e book_damas_brasileiras_absoluto.txt.
 //
-//  [SRCH-V15-1] TT: 2^20 entradas (4× maior que v14)
-//  [SRCH-V15-2] IID (Internal Iterative Deepening): se sem TT e depth>=5, busca
-//               prévia a depth-3 para ordenação de movimentos
-//  [SRCH-V15-3] LMR threshold reduzido: i>=2, depth>=3 (era i>=4, depth>=4)
-//               → reduções mais agressivas, busca mais profunda net
-//  [SRCH-V15-4] LMR duplo: i>=5, depth>=5 → reduce 2 (era nunca)
-//  [SRCH-V15-5] Futilidade ampliada: depth<=2 (era apenas depth==1)
-//  [SRCH-V15-6] Janelas de aspiração: início 25 cp (era 50 cp), crescimento × 2
-//  [SRCH-V15-7] Seleção fuzzy removida (causava jogadas fracas fora do livro)
-//  [SRCH-V15-8] Limite de tempo mais inteligente: alocação proporcional + urgência
+//  [SRCH-V17-1] NMP agora skipado em finais puros de damas (≤6 peças, 0 pedras)
+//               para evitar falsos cortes em posições de zugzwang. Ganho em
+//               qualidade de jogo em KK, KKK×K e finais análogos.
 //
-//  [BOOK-V15-1] Sistema PDN: parser de notação algébrica integrado ao motor
-//  [BOOK-V15-2] Abertura Russa (c3-b4) coberta com 80+ linhas validadas
-//  [BOOK-V15-3] Extensões das linhas Cruz, Pioneiro, Flank, Alma
-//  [BOOK-V15-4] Linhas da Abertura Turca e variantes adicionais
-//  [BOOK-V15-5] Total estimado: 3.800+ linhas únicas validadas
-//  [BOOK-V15-6] Profundidade máxima do book: 12 half-moves (6 lances completos)
-//  [BOOK-V15-7] Validação 100%: todas as linhas PDN passam pelo motor antes de entrar
+//  [SRCH-V17-2] Delta pruning da qsearch usa margem dinâmica baseada no valor
+//               real de dama para a fase atual (285 + phase_bonus + 60) em vez
+//               do valor fixo 400. Cortes mais precisos no final do jogo.
+//
+//  [VIS-V17-1]  Peças selecionadas: destaque duplo (anel branco + anel verde)
+//               para visibilidade máxima em qualquer fundo.
+//  [VIS-V17-2]  Captura visualizada: casas das peças-alvo mostradas em vermelho
+//               quando uma peça captora está selecionada.
+//  [VIS-V17-3]  Pontos de destino melhorados: círculo branco opaco mais visível.
+//  [VIS-V17-4]  Peças com gradiente e sombra 3D mais realistas.
+//  [VIS-V17-5]  Hover com efeito de levitação (translateY + scale).
+//  [VIS-V17-6]  Tabuleiro com sombra profunda multicamada premium.
+//  [VIS-V17-7]  Crown da dama ligeiramente maior e com filtro drop-shadow melhor.
 // ══════════════════════════════════════════════════════════════════════════════
 
     const ENGINE_VERSION = "17.0.0";
@@ -913,14 +923,21 @@
                         if (enemyIdx === -1) { enemyIdx = chk; if (!isKing && step > 1) break; }
                         else break;
                     } else if (enemyIdx !== -1) {
+                        // CBD Art.13 / Regra 7: A pedra que durante o lance de captura de
+                        // várias peças apenas passe pela casa de coroação SEM AÍ PARAR
+                        // NÃO será promovida a dama. A promoção só ocorre quando a pedra
+                        // TERMINA a sequência na casa de coroação.
                         const nCap = curCap.concat(enemyIdx), nPath = curPath.concat(chk);
                         const origP = this.board[idx];
+                        // During the sequence, the piece always remains what it was (man stays man).
                         this.board[idx] = EMPTY; this.board[chk] = origP;
                         const nextCaps = this.getCaptures(chk, nr, nc, isKing, nCap, origFrom, nPath);
                         this.board[idx] = origP; this.board[chk] = EMPTY;
                         if (nextCaps.length > 0) {
                             moves.push(...nextCaps);
                         } else {
+                            // Sequence ends here: promote ONLY if the final landing square
+                            // is the crown row (the piece "stops" there).
                             const atCrown = !isKing && ((this.turn === 1 && nr === 7) || (this.turn === -1 && nr === 0));
                             let capKings = 0;
                             for (const cIdx of nCap) if (Math.abs(this.board[cIdx]) === 2) capKings++;
@@ -1585,7 +1602,7 @@
     let nodes = 0, searchAborted = false, searchStartTime = 0, searchTimeLimitMs = 0;
     let inNullMove = false;
 
-    // [SRCH-V16-QS] Quiescence Search separada com stand-pat e delta pruning.
+    // [SRCH-V17-QS] Quiescence Search separada com stand-pat e delta pruning.
     // Em damas, captura é obrigatória quando existe. Quando não há capturas,
     // usa stand-pat para evitar efeito horizonte em posições quietas.
     function qsearch(state, alpha, beta, ply, depth) {
@@ -1604,8 +1621,10 @@
             // Stand-pat em posição quieta
             const standPat = state.eval();
             if (standPat >= beta) return standPat;
-            // Delta pruning: se mesmo capturando dama não ajuda, corta
-            if (standPat + 400 < alpha) return standPat;
+            // Delta pruning: margem dinâmica baseada no valor de dama atual
+            let pc = 0; for (let i=0;i<64;i++) if(state.board[i]!==EMPTY) pc++;
+            const kv = 285 + Math.round((24 - Math.min(pc, 24)) * 6);
+            if (standPat + kv + 60 < alpha) return standPat;
             return standPat;
         }
 
@@ -1671,16 +1690,20 @@
             if (staticEval + margin <= alpha) return staticEval;
         }
 
-        // [SRCH-V16-NMP] Null Move Pruning com R adaptativo e guard de finais
+        // [SRCH-V17-NMP] Null Move Pruning com R adaptativo e guard de finais.
+        // Skipped em finais puros de damas (poucas peças, todas damas) para
+        // evitar falsos cortes em posições de zugzwang.
         if (!inNullMove && !isPV && depth >= 4 && !hasCaptures &&
                 beta < 9000 && beta > -9000) {
-            let wK=0, bK=0, pc=0;
+            let wK=0, bK=0, wP=0, bP=0, pc=0;
             for (let i=0; i<64; i++) {
                 const sq=state.board[i]; if (sq===EMPTY) continue; pc++;
                 if (sq===W_KING) wK++; else if (sq===B_KING) bK++;
+                else if (sq===W_MAN) wP++; else bP++;
             }
             const sideKings = state.turn===1 ? wK : bK;
-            if (pc >= 10 || sideKings > 0) {
+            const isPureKingEG = (wP===0 && bP===0 && pc<=6);
+            if (!isPureKingEG && (pc >= 10 || sideKings > 0)) {
                 if (staticEval===null) staticEval = state.eval();
                 if (staticEval >= beta) {
                     const ns = state.clone();
@@ -1914,12 +1937,24 @@
     }
 
     function render() {
+        // Collect capture path and victim squares for the selected piece's moves
+        const capturePathSquares = new Set();
+        const captureVictimSquares = new Set();
+        if (selIdx !== -1 && valTgt.length > 0 && valTgt[0].captured.length > 0) {
+            for (const m of valTgt) {
+                for (const sq of m.path) capturePathSquares.add(sq);
+                for (const sq of m.captured) captureVictimSquares.add(sq);
+            }
+        }
+
         for (let i=0; i<64; i++) {
             const sq=document.getElementById(`sq-${i}`); if(!sq) continue;
-            let cn=`square ${((i>>3)+(i&7))%2===0?'sq-dark':'sq-light'}`;
+            const isDark = ((i>>3)+(i&7))%2===0;
+            let cn=`square ${isDark?'sq-dark':'sq-light'}`;
             if (selIdx===i) cn+=' highlight';
-            if (lastM && (lastM.from===i || lastM.to===i)) cn+=' last-move';
+            else if (lastM && (lastM.from===i || lastM.to===i)) cn+=' last-move';
             if (valTgt.find(m=>m.to===i)) cn+=' suggestion';
+            else if (isDark && captureVictimSquares.has(i)) cn+=' capture-hint';
             sq.className=cn;
             const p=gameState.board[i];
             sq.innerHTML = p!==EMPTY
@@ -2408,6 +2443,9 @@
     buildOpeningBook();
     initDOM();
     resetBoard();
+    // Set dynamic version badge
+    const _vb = document.getElementById('version-badge');
+    if (_vb) _vb.textContent = `v${ENGINE_VERSION} · Elite Master Edition`;
 
 </script>
 </body>

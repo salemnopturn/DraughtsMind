@@ -2115,7 +2115,7 @@
                 // [SRCH-V16-LMR] LMR adaptativo inspirado em log(depth)*log(i)
                 let lmrR = 0;
                 if (isQuiet && depth >= 3 && i >= 2 && ply >= 1) {
-                    lmrR = Math.max(1, Math.floor(Math.log(depth) * Math.log(i+1) / 2.0)  // [SRCH-V28-LMR]);
+                    lmrR = Math.max(1, Math.floor(Math.log(depth) * Math.log(i+1) / 2.0));  // [SRCH-V28-LMR]
                     if (depth >= 5 && i >= 5) lmrR = Math.min(lmrR+1, depth-2);
                     if (depth >= 8 && i >= 10) lmrR = Math.min(lmrR+1, depth-2);
                 }

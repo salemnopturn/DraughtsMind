@@ -1,4 +1,3 @@
-<!--
 ⛃ DraughtsMind v31.0.0 — Grandmaster Edition ⛃
 
 O DraughtsMind é um motor de IA de alto desempenho para Damas Brasileiras (regra CBD), desenvolvido com foco em precisão algorítmica, velocidade e acessibilidade. Projetado para funcionar 100% offline, diretamente no navegador, transforma sua máquina em um laboratório tático para damistas, teóricos e estudantes do jogo.
@@ -19,4 +18,4 @@ O DraughtsMind é um motor de IA de alto desempenho para Damas Brasileiras (regr
 ---
 
 🧠 DraughtsMind — Think Deeper. Play Better.
--->
+

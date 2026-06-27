@@ -14,6 +14,7 @@
         <button id="btn-new" class="btn btn-gold">Novo Jogo</button>
         <button id="btn-save" class="btn btn-blue">Salvar</button>
         <button id="btn-load" class="btn btn-outline">Carregar</button>
+        <button id="btn-pdn" class="btn btn-outline">Importar PDN</button>
       </div>
     </header>
 
@@ -54,6 +55,15 @@
           </div>
           <label class="ctrl-label">Profundidade: <span id="depth-val">8</span></label>
           <input type="range" id="cfg-depth" min="1" max="16" value="8" class="slider">
+          <label class="ctrl-label toggle-label">
+            <input type="checkbox" id="cfg-analysis" class="toggle-input">
+            Análise em tempo real
+          </label>
+          <label class="ctrl-label">Visão</label>
+          <select id="cfg-view" class="select-input">
+            <option value="W">Brancas</option>
+            <option value="B">Pretas</option>
+          </select>
         </div>
 
         <div class="panel history-panel">
@@ -80,6 +90,27 @@
       <div class="modal-actions">
         <button class="btn btn-gold" id="resume-yes">Retomar</button>
         <button class="btn btn-outline" id="resume-no">Novo Jogo</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="pdn-modal" style="display:none">
+    <div class="modal">
+      <h2>Importar PDN</h2>
+      <textarea id="pdn-input" rows="6" placeholder="Cole a notação PDN aqui..."></textarea>
+      <div class="modal-actions">
+        <button class="btn btn-gold" id="pdn-import">Importar</button>
+        <button class="btn btn-outline" onclick="document.getElementById('pdn-modal').style.display='none'">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="load-modal" style="display:none">
+    <div class="modal">
+      <h2>Carregar Partida</h2>
+      <div id="load-list" style="text-align:left;max-height:300px;overflow-y:auto;margin-bottom:1rem;"></div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="document.getElementById('load-modal').style.display='none'">Cancelar</button>
       </div>
     </div>
   </div>

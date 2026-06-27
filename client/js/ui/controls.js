@@ -50,3 +50,8 @@ export function getMode() {
 export function getDepth() {
     return currentDepth;
 }
+
+export function isAnalysisOn() {
+    const cb = document.getElementById('cfg-analysis');
+    return cb ? cb.checked : false;
+}

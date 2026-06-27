@@ -451,6 +451,77 @@ body {
     cursor: pointer;
 }
 
+/* ── Toggle ─────────────────────────────────────────────────────── */
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+.toggle-input {
+    accent-color: var(--gold-bright);
+}
+
+/* ── Select ─────────────────────────────────────────────────────── */
+.select-input {
+    width: 100%;
+    padding: 0.4rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    background: var(--bg-panel);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+}
+
+/* ── Textarea ───────────────────────────────────────────────────── */
+#pdn-input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    background: var(--bg-panel);
+    color: var(--text-primary);
+    font-family: monospace;
+    font-size: 0.85rem;
+    resize: vertical;
+    margin-bottom: 1rem;
+}
+
+/* ── Load list ──────────────────────────────────────────────────── */
+.load-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    margin-bottom: 0.4rem;
+    cursor: pointer;
+    transition: border-color var(--t-fast);
+}
+.load-item:hover {
+    border-color: var(--gold-bright);
+}
+.load-item-info {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+.load-item-mode {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.85rem;
+}
+.load-item-delete {
+    background: none;
+    border: none;
+    color: var(--red);
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 0.2rem 0.4rem;
+}
+
 /* ── Move list ────────────────────────────────────────────────────── */
 .panel-title {
     font-size: 0.75rem;

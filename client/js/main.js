@@ -3,12 +3,12 @@ import { State } from './game/state.js';
 import { loadBook } from './game/book.js';
 import { getBestMove } from './game/search.js';
 import {
-    initDOM, render, setMoveCallback, updateCoords
+    initDOM, render, setMoveCallback, updateCoords, setFlipped, getFlipped
 } from './ui/board.js';
 import {
-    getState, setState, resetState, applyMove as applyGameMove
+    getState, setState, resetState, clearSelection, selectSquare, applyMove as applyGameMove
 } from './game/gameState.js';
-import { initControls, getMode, getDepth } from './ui/controls.js';
+import { initControls, getMode, getDepth, isAnalysisOn } from './ui/controls.js';
 import { addMove, clearHistory, getHistory, getPDN, renderHistory } from './ui/history.js';
 import {
   initClock, resetClocks, startClock, stopClock,
@@ -56,6 +56,26 @@ function isCPUTurn() {
     return false;
 }
 
+// ── Real-time analysis ───────────────────────────────────────────────────────
+
+function runAna() {
+    const t0 = Date.now();
+    document.getElementById('analysis-text').textContent = `Avaliando profundidade ${getDepth()}...`;
+    setTimeout(() => {
+        const res = getBestMove(getState(), getDepth(), 0);
+        const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+        const sc = res.score;
+        const scStr = sc > 9000 ? 'Mate' : sc < -9000 ? '-Mate' : (sc >= 0 ? '+' : '') + (sc / 100).toFixed(2);
+        const pvStr = res.pv && res.pv.length > 0 ? res.pv.slice(0, 5).map(move2Str).join(' ') : '-';
+        document.getElementById('analysis-text').textContent = `P:${res.depth} Eval:${scStr} T:${elapsed}s PV:${pvStr}`;
+        if (res.move) {
+            clearSelection();
+            selectSquare(res.move.from);
+            render();
+        }
+    }, 10);
+}
+
 // ── Game flow ───────────────────────────────────────────────────────────────
 
 function startNewGame() {
@@ -85,6 +105,7 @@ function loop() {
         return;
     }
     if (isCPUTurn()) triggerCPU();
+    else if (isAnalysisOn() && !isCPUTurn()) runAna();
 }
 
 function triggerCPU() {
@@ -264,6 +285,125 @@ async function resumeMatch(id) {
     }
 }
 
+// ── Load modal ──────────────────────────────────────────────────────────────
+
+const MODE_LABELS = { pvp: 'PvP', pva: 'PvA', ava: 'AvA' };
+
+async function showLoadModal() {
+    const modal = document.getElementById('load-modal');
+    const list = document.getElementById('load-list');
+    list.innerHTML = '';
+    try {
+        const res = await apiGet('/api/matches');
+        const matches = Array.isArray(res) ? res : [];
+        if (matches.length === 0) {
+            list.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">Nenhuma partida salva.</p>';
+        } else {
+            for (const m of matches) {
+                const div = document.createElement('div');
+                div.className = 'load-item';
+                const left = document.createElement('div');
+                const modeLabel = MODE_LABELS[m.mode] || m.mode;
+                const resultText = m.result ? ` — ${m.result}` : ' (em andamento)';
+                left.innerHTML = `<div class="load-item-mode">${modeLabel}</div><div class="load-item-info">${new Date(m.updated_at || m.created_at).toLocaleString('pt-BR')}${resultText}</div>`;
+                const delBtn = document.createElement('button');
+                delBtn.className = 'load-item-delete';
+                delBtn.textContent = '✕';
+                delBtn.onclick = async (e) => {
+                    e.stopPropagation();
+                    await deleteMatch(m.id);
+                    showLoadModal();
+                };
+                div.appendChild(left);
+                div.appendChild(delBtn);
+                div.onclick = async () => {
+                    modal.style.display = 'none';
+                    await resumeMatch(m.id);
+                };
+                list.appendChild(div);
+            }
+        }
+    } catch (_) {
+        list.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">Erro ao carregar partidas.</p>';
+    }
+    modal.style.display = 'flex';
+}
+
+// ── PDN Import ──────────────────────────────────────────────────────────────
+
+function numToIdx(num) {
+    if (num < 1 || num > 32) return -1;
+    const r = 7 - Math.floor((num - 1) / 4), offset = (num - 1) % 4;
+    const c = r % 2 === 0 ? offset * 2 : offset * 2 + 1;
+    return r * 8 + c;
+}
+
+function tryMatchMove(state, tk) {
+    const moves = state.getMoves();
+    let found = moves.find(m => move2Str(m).toLowerCase() === tk.toLowerCase());
+    if (found) return found;
+    if (/^\d+([-x:]\d+)+$/i.test(tk)) {
+        const pts = tk.split(/[-x:]/i).map(Number), isCapture = /[x:]/i.test(tk);
+        const sIdx = numToIdx(pts[0]), eIdx = numToIdx(pts[pts.length - 1]);
+        if (sIdx < 0 || eIdx < 0) return null;
+        let poss = moves.filter(m => m.from === sIdx && m.to === eIdx);
+        if (poss.length > 1 && pts.length > 2) {
+            const ep = pts.slice(1).map(numToIdx);
+            const nw = poss.filter(m => m.path.length === ep.length && m.path.every((sq, i) => sq === ep[i]));
+            if (nw.length > 0) poss = nw;
+        }
+        if (poss.length > 1 && isCapture) { const c = poss.filter(m => m.captured.length > 0); if (c.length > 0) poss = c; }
+        if (poss.length > 0) return poss[0];
+    }
+    return null;
+}
+
+function importPDN(str) {
+    str = str.replace(/^%[^\r\n]*/gm, ' ');
+    str = str.replace(/^\[[^\]]*\][ \t]*/gm, ' ');
+    let prev;
+    do { prev = str; str = str.replace(/\{[^{}]*\}/g, ' '); } while (str !== prev);
+    str = str.replace(/\r?\n/g, ' ');
+    str = str.replace(/\$\d{1,3}/g, ' ').replace(/[?!]+/g, ' ');
+    str = str.replace(/\b(1\/2-1\/2|2-0|0-2|1-1|1-0|0-1)\b/g, ' ').replace(/\*/g, ' ');
+    str = str.replace(/\d+\.+/g, ' ');
+    str = str.replace(/\(/g, ' ( ').replace(/\)/g, ' ) ');
+
+    const tokens = str.split(/\s+/).filter(t => t.length > 0);
+
+    resetState();
+    clearHistory();
+
+    const state = getState();
+    const skipped = [];
+
+    for (const tk of tokens) {
+        if (tk === '(' || tk === ')') continue;
+        const found = tryMatchMove(state, tk);
+        if (!found) { skipped.push(tk); continue; }
+        state.applyMove(found);
+        addMove(found, move2Str(found));
+    }
+
+    gameStarted = true;
+    gameEnded = false;
+    isComputing = false;
+    currentMatchId = null;
+
+    document.getElementById('modal').style.display = 'none';
+    render();
+    renderHistory();
+
+    const analysisEl = document.getElementById('analysis-text');
+    if (skipped.length > 0) {
+        const uniq = [...new Set(skipped)];
+        const safe = uniq.slice(0, 6).join(', ');
+        analysisEl.textContent = `Importado com ${skipped.length} token(s) desconhecido(s): ${safe}${uniq.length > 6 ? '…' : ''}`;
+    } else {
+        analysisEl.textContent = `✓ Importação concluída. ${getHistory().length} lance(s) carregados.`;
+    }
+}
+
 // ── Initialization ──────────────────────────────────────────────────────────
 
 async function init() {
@@ -272,10 +412,42 @@ async function init() {
     initClock({ onTimeout: () => {} });
     initControls({
         onNewGame: startNewGame,
-        onModeChange: () => {},
+        onModeChange: (mode) => {
+            // Auto-flip: MVH → black view, others → white view
+            const flipped = mode === MODE_AVA;
+            setFlipped(flipped);
+            const viewSel = document.getElementById('cfg-view');
+            if (viewSel) viewSel.value = flipped ? 'B' : 'W';
+            updateCoords(flipped);
+            render();
+        },
         onDepthChange: () => {}
     });
     updateCoords(false);
+
+    // Save / Load buttons
+    document.getElementById('btn-save').onclick = saveMatch;
+    document.getElementById('btn-load').onclick = showLoadModal;
+
+    // PDN import button
+    document.getElementById('btn-pdn').onclick = () => {
+        document.getElementById('pdn-input').value = '';
+        document.getElementById('pdn-modal').style.display = 'flex';
+    };
+    document.getElementById('pdn-import').onclick = () => {
+        const txt = document.getElementById('pdn-input').value.trim();
+        if (!txt) return;
+        document.getElementById('pdn-modal').style.display = 'none';
+        importPDN(txt);
+    };
+
+    // View selector (board flip)
+    document.getElementById('cfg-view').onchange = (e) => {
+        const flipped = e.target.value === 'B';
+        setFlipped(flipped);
+        updateCoords(flipped);
+        render();
+    };
 
     setMoveCallback((m) => {
         if (isCPUTurn() || !gameStarted || gameEnded || isComputing) return;

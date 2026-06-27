@@ -91,8 +91,22 @@ function triggerCPU() {
             ? res.pv.slice(0, 3).map(move2Str).join(' ')
             : '-';
         const bookTag = res.isBook ? ' [Livro]' : '';
-        document.getElementById('analysis-text').innerHTML =
-            `P:<strong>${res.depth}</strong> Eval:<strong>${scStr}</strong> N:<strong>${res.nodes}</strong> PV:<strong>${pvStr}</strong>${bookTag}`;
+        const analysisEl = document.getElementById('analysis-text');
+        analysisEl.textContent = '';
+        const parts = [
+            ['P:', res.depth], [' Eval:', scStr], [' N:', res.nodes], [' PV:', pvStr]
+        ];
+        for (const [label, value] of parts) {
+            analysisEl.appendChild(document.createTextNode(label));
+            const b = document.createElement('strong');
+            b.textContent = String(value);
+            analysisEl.appendChild(b);
+        }
+        if (bookTag) {
+            const span = document.createElement('span');
+            span.textContent = bookTag;
+            analysisEl.appendChild(span);
+        }
 
         if (res.move) executeMove(res.move);
         else render();

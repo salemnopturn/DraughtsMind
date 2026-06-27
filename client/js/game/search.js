@@ -2,6 +2,9 @@ import { EMPTY, W_MAN, B_MAN, W_KING, B_KING, moveSorter } from './constants.js'
 import { State } from './state.js';
 import { evaluate } from './eval.js';
 
+let evalMode = 0;
+export function setEvalMode(m) { evalMode = m; }
+
 // Dynamic import for book.js (Task 6) — defaults to null if unavailable
 let _probeBookFn = null;
 (async () => {
@@ -117,7 +120,7 @@ function qsearch(state, alpha, beta, ply, depth) {
     const hasCaptures = moves[0].captured.length > 0;
 
     if (!hasCaptures) {
-        const standPat = evaluate(state);
+        const standPat = evaluate(state, evalMode);
         if (standPat >= beta) return standPat;
         if (standPat > alpha) alpha = standPat;
         return alpha;
@@ -184,7 +187,7 @@ function search(state, depth, alpha, beta, ply, prevFrom, prevTo) {
     // [SRCH-V16-FP] Futility Pruning por profundidade
     if (!isPV && depth <= 3 && ply >= 1 && !inNullMove && !hasCaptures &&
             alpha > -8000 && beta < 8000) {
-        staticEval = evaluate(state);
+        staticEval = evaluate(state, evalMode);
         const margin = depth === 1 ? 120 : depth === 2 ? 220 : 340;
         if (staticEval + margin <= alpha) return staticEval;
     }
@@ -201,7 +204,7 @@ function search(state, depth, alpha, beta, ply, prevFrom, prevTo) {
         const sideKings = state.turn===1 ? wK : bK;
         const isPureKingEG = (wP===0 && bP===0 && pc<=6);
         if (!isPureKingEG && (pc >= 10 || sideKings > 0)) {
-            if (staticEval===null) staticEval = evaluate(state);
+            if (staticEval===null) staticEval = evaluate(state, evalMode);
             if (staticEval >= beta) {
                 const ns = state.clone();
                 ns.turn = -ns.turn; ns.halfMoveClock++;
@@ -221,7 +224,7 @@ function search(state, depth, alpha, beta, ply, prevFrom, prevTo) {
 
     // [SRCH-V27-RZ] Razoring em depth<=2
     if (!isPV && depth <= 2 && !inNullMove && !hasCaptures && alpha > -8000) {
-        if (staticEval===null) staticEval = evaluate(state);
+        if (staticEval===null) staticEval = evaluate(state, evalMode);
         const razorMargin = depth === 1 ? 320 : 540;
         if (staticEval + razorMargin < alpha) return qsearch(state, alpha, beta, ply, 0);
     }
@@ -301,7 +304,7 @@ export function getBestMove(state, maxDepth, timeLimitMs) {
         return { move: bookMove, score: 0, depth: 0, nodes: 0, pv: [bookMove], isBook: true };
     }
 
-    if (moves.length === 1) return { move:moves[0], score:evaluate(state), depth:1, nodes:1, pv:[moves[0]], isBook:false };
+    if (moves.length === 1) return { move:moves[0], score:evaluate(state, evalMode), depth:1, nodes:1, pv:[moves[0]], isBook:false };
 
     for (const k of killers) { k[0]=null; k[1]=null; }
     histTable.fill(0);

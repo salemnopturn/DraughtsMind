@@ -46,7 +46,7 @@ const LONG_DIAG_A8H1 = new Set([7,14,21,28,35,42,49,56]);
 // ── Evaluation ────────────────────────────────────────────────────────────────
 
 // v15.0.0 — adapted from monolith State.eval() method
-export function evaluate(state) {
+export function evaluate(state, mode = 0) {
     let wP=0, bP=0;
     let wMob=0, bMob=0;
     let wBack=0, bBack=0, wEdge=0, bEdge=0;
@@ -375,6 +375,7 @@ export function evaluate(state) {
         score += (wConn-bConn)*3;
     }
 
-    // [EVAL-V24-TEMPO] +4 cp bias for human games (v1 hardcodes cfgMode != MODE_MVM)
-    return score * state.turn + 4;
+    // [EVAL-V24-TEMPO] +4 cp bias for human games (0 for AvA)
+    const bias = (mode === 3) ? 0 : 4;
+    return score * state.turn + bias;
 }

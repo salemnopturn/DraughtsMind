@@ -20,6 +20,37 @@ let gameEnded = false;
 let isComputing = false;
 let currentMatchId = null;
 
+// ── Piece count + CPU stats ────────────────────────────────────────────────
+
+function updatePieceCounts() {
+    const state = getState();
+    let wP = 0, wK = 0, bP = 0, bK = 0;
+    for (let i = 0; i < 64; i++) {
+        const p = state.board[i];
+        if (p === 1) wP++; else if (p === 2) wK++;
+        else if (p === -1) bP++; else if (p === -2) bK++;
+    }
+    document.getElementById('white-count').textContent = `⚪ ${wP + wK}`;
+    document.getElementById('black-count').textContent = `⚫ ${bP + bK}`;
+}
+
+const cpuStats = { wWins: 0, bWins: 0, draws: 0, games: 0 };
+
+function updateCpuStats(result) {
+    cpuStats.games++;
+    if (result === 'white') cpuStats.wWins++;
+    else if (result === 'black') cpuStats.bWins++;
+    else cpuStats.draws++;
+    const el = document.getElementById('cpu-stats');
+    if (el) {
+        el.style.display = 'block';
+        el.innerHTML = `<span style="color:#4a9;">⚪${cpuStats.wWins}</span> `
+            + `<span style="color:#888;">½${cpuStats.draws}</span> `
+            + `<span style="color:#e76;">⚫${cpuStats.bWins}</span> `
+            + `<span style="color:#aaa;">(${cpuStats.games} jg)</span>`;
+    }
+}
+
 // ── API helpers ─────────────────────────────────────────────────────────────
 
 async function apiPost(url, body) {
@@ -89,6 +120,7 @@ function startNewGame() {
     isComputing = false;
     document.getElementById('modal').style.display = 'none';
     document.getElementById('resume-modal').style.display = 'none';
+    updatePieceCounts();
     render();
     renderHistory();
     loop();
@@ -155,6 +187,7 @@ function triggerCPU() {
 
 function executeMove(m) {
     applyGameMove(m);
+    updatePieceCounts();
     addMove(m, move2Str(m));
     render();
     renderHistory();
@@ -174,9 +207,11 @@ function checkGameEnd() {
         const winner = state.turn === 1 ? 'Pretas' : 'Brancas';
         popModal('Fim de Jogo', `${winner} vencem! (Sem lances legais)`);
         finalizeMatch(state.turn === 1 ? 'black' : 'white');
+        if (getMode() === MODE_AVA) updateCpuStats(state.turn === 1 ? 'black' : 'white');
     } else if (draw) {
         popModal('Fim de Jogo', draw);
         finalizeMatch('draw');
+        if (getMode() === MODE_AVA) updateCpuStats('draw');
     } else {
         document.getElementById('status-text').innerText =
             `Vez das ${state.turn === 1 ? 'Brancas' : 'Pretas'}`;

@@ -345,6 +345,14 @@ body {
     text-align: center;
 }
 
+/* ── Stats panel ──────────────────────────────────────────────────── */
+.piece-count {
+    display: flex;
+    justify-content: space-around;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
 /* ── Mode buttons ─────────────────────────────────────────────────── */
 .ctrl-label {
     display: block;

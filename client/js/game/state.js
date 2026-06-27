@@ -67,6 +67,34 @@ export class State {
         this.turn *= -1;
         this.hash ^= zobristTurn;
     }
+
+    save(buf) {
+        buf.board.set(this.board);
+        buf.turn = this.turn;
+        buf.hash = this.hash;
+        buf.halfMoveClock = this.halfMoveClock;
+        buf.endgameClock = this.endgameClock;
+        buf.isEndgame = this.isEndgame;
+        buf.endgameLimit = this.endgameLimit;
+        buf.wK = this.wK; buf.wP = this.wP; buf.bK = this.bK; buf.bP = this.bP;
+        const hLen = this.hashHist.length;
+        buf.hashHistArr.length = hLen;
+        for (let i = 0; i < hLen; i++) buf.hashHistArr[i] = this.hashHist[i];
+    }
+
+    restore(buf) {
+        this.board.set(buf.board);
+        this.turn = buf.turn;
+        this.hash = buf.hash;
+        this.halfMoveClock = buf.halfMoveClock;
+        this.endgameClock = buf.endgameClock;
+        this.isEndgame = buf.isEndgame;
+        this.endgameLimit = buf.endgameLimit;
+        this.wK = buf.wK; this.wP = buf.wP; this.bK = buf.bK; this.bP = buf.bP;
+        const hLen = buf.hashHistArr.length;
+        this.hashHist.length = hLen;
+        for (let i = 0; i < hLen; i++) this.hashHist[i] = buf.hashHistArr[i];
+    }
     isValid(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 8; }
 
     getMoves() {

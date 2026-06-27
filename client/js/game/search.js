@@ -56,10 +56,18 @@ function ttProbe(hash) {
 // ════════════════════════════════════════════════════════════════════════
 //  KILLER MOVES + HISTÓRIA + COUNTER MOVES (v16)
 // ════════════════════════════════════════════════════════════════════════
-const MAX_PLY = 64;
+const MAX_PLY = 128;
 const killers = Array.from({ length: MAX_PLY }, () => [null, null]);
 const histTable = new Int32Array(4096);
 const counterTable = new Array(4096).fill(null);
+
+const undoBuffers = Array.from({ length: MAX_PLY }, () => ({
+    board: new Int8Array(64),
+    turn: 0, hash: 0, halfMoveClock: 0,
+    endgameClock: 0, isEndgame: false, endgameLimit: 0,
+    wK: 0, wP: 0, bK: 0, bP: 0,
+    hashHistArr: []
+}));
 
 function storeKiller(ply, m) {
     if (ply >= MAX_PLY) return;
@@ -112,6 +120,7 @@ function qsearch(state, alpha, beta, ply, depth) {
     if ((nodes & 4095) === 0 && searchTimeLimitMs > 0) {
         if (Date.now() - searchStartTime > searchTimeLimitMs) { searchAborted = true; return alpha; }
     }
+    if (ply >= MAX_PLY) return evaluate(state, evalMode);
     if (state.checkDraw()) return 0;
 
     const moves = state.getMoves();
@@ -129,9 +138,10 @@ function qsearch(state, alpha, beta, ply, depth) {
     let bestScore = -Infinity;
     for (const m of moves) {
         if (searchAborted) return alpha;
-        const s2 = state.clone();
-        s2.applyMove(m);
-        const score = -qsearch(s2, -beta, -alpha, ply+1, depth-1);
+        state.save(undoBuffers[ply]);
+        state.applyMove(m);
+        const score = -qsearch(state, -beta, -alpha, ply+1, depth-1);
+        state.restore(undoBuffers[ply]);
         if (score > bestScore) bestScore = score;
         if (score > alpha) alpha = score;
         if (alpha >= beta) break;
@@ -147,6 +157,7 @@ function search(state, depth, alpha, beta, ply, prevFrom, prevTo) {
     if ((nodes & 4095) === 0 && searchTimeLimitMs > 0) {
         if (Date.now() - searchStartTime > searchTimeLimitMs) { searchAborted = true; return alpha; }
     }
+    if (ply >= MAX_PLY) return evaluate(state, evalMode);
     if (state.checkDraw()) return 0;
 
     const isPV = beta > alpha + 1;
@@ -202,17 +213,20 @@ function search(state, depth, alpha, beta, ply, prevFrom, prevTo) {
         if (!isPureKingEG && (pc >= 10 || sideKings > 0)) {
             if (staticEval===null) staticEval = evaluate(state, evalMode);
             if (staticEval >= beta) {
-                const ns = state.clone();
-                ns.flipTurn(); ns.halfMoveClock++;
-                const h2 = ns.hash;
-                if (!ns.hashHist.includes(h2)) {
-                    ns.hashHist.push(h2);
-                    if (ns.hashHist.length > 256) ns.hashHist.shift();
+                state.save(undoBuffers[ply]);
+                state.flipTurn(); state.halfMoveClock++;
+                const h2 = state.hash;
+                if (!state.hashHist.includes(h2)) {
+                    state.hashHist.push(h2);
+                    if (state.hashHist.length > 256) state.hashHist.shift();
                     const R_NMP = depth >= 7 ? 4 : depth >= 5 ? 3 : 2;
                     inNullMove = true;
-                    const nullScore = -search(ns, depth-1-R_NMP, -beta, -beta+1, ply+1, -1, -1);
+                    const nullScore = -search(state, depth-1-R_NMP, -beta, -beta+1, ply+1, -1, -1);
                     inNullMove = false;
+                    state.restore(undoBuffers[ply]);
                     if (!searchAborted && nullScore >= beta) return nullScore;
+                } else {
+                    state.restore(undoBuffers[ply]);
                 }
             }
         }
@@ -243,12 +257,12 @@ function search(state, depth, alpha, beta, ply, prevFrom, prevTo) {
         }
         if (isQuiet) quietCount++;
 
-        const s2 = state.clone();
-        s2.applyMove(m);
+        state.save(undoBuffers[ply]);
+        state.applyMove(m);
 
         let score;
         if (i === 0) {
-            score = -search(s2, depth-1+extension, -beta, -alpha, ply+1, m.from, m.to);
+            score = -search(state, depth-1+extension, -beta, -alpha, ply+1, m.from, m.to);
         } else {
             // [SRCH-V16-LMR] LMR adaptativo
             let lmrR = 0;
@@ -257,11 +271,12 @@ function search(state, depth, alpha, beta, ply, prevFrom, prevTo) {
                 if (depth >= 5 && i >= 5) lmrR = Math.min(lmrR+1, depth-2);
                 if (depth >= 8 && i >= 10) lmrR = Math.min(lmrR+1, depth-2);
             }
-            score = -search(s2, depth-1-lmrR, -alpha-1, -alpha, ply+1, m.from, m.to);
+            score = -search(state, depth-1-lmrR, -alpha-1, -alpha, ply+1, m.from, m.to);
             if (!searchAborted && score > alpha && (lmrR > 0 || isPV)) {
-                score = -search(s2, depth-1, -beta, -alpha, ply+1, m.from, m.to);
+                score = -search(state, depth-1, -beta, -alpha, ply+1, m.from, m.to);
             }
         }
+        state.restore(undoBuffers[ply]);
         if (searchAborted) return alpha;
 
         if (score > bestScore) { bestScore=score; bestFm=m.from; bestTm=m.to; }
@@ -351,9 +366,10 @@ export function getBestMove(state, maxDepth, timeLimitMs) {
         if (reachedDepth >= 2 && bestScore > -9000 && bestScore < 9000 && moves.length > 1) {
             const rootScores = [];
             for (const m of moves) {
-                const s2 = state.clone();
-                s2.applyMove(m);
-                const sc = -search(s2, 1, -Infinity, Infinity, 1, m.from, m.to);
+                state.save(undoBuffers[0]);
+                state.applyMove(m);
+                const sc = -search(state, 1, -Infinity, Infinity, 1, m.from, m.to);
+                state.restore(undoBuffers[0]);
                 rootScores.push({ move: m, score: sc });
             }
             const maxQuick = rootScores.reduce((mx, e) => Math.max(mx, e.score), -Infinity);
@@ -372,11 +388,17 @@ export function getBestMove(state, maxDepth, timeLimitMs) {
     }
 
     // Extrair PV da TT
-    const pv=[], cur=state.clone();
+    const pv=[];
     for (let d=0; d<Math.min(reachedDepth,6); d++) {
-        const te = ttProbe(cur.hash); if(!te||te.fm<0) break;
-        const ms = cur.getMoves().find(m=>m.from===te.fm&&m.to===te.tm); if(!ms) break;
-        pv.push(ms); cur.applyMove(ms);
+        const te = ttProbe(state.hash); if(!te||te.fm<0) break;
+        const ms = state.getMoves().find(m=>m.from===te.fm&&m.to===te.tm); if(!ms) break;
+        pv.push(ms);
+        state.save(undoBuffers[d]);
+        state.applyMove(ms);
+    }
+    // Restore state after PV extraction
+    for (let d=Math.min(reachedDepth,6)-1; d>=0; d--) {
+        state.restore(undoBuffers[d]);
     }
 
     return { move:bestMove, score:bestScore, depth:reachedDepth, nodes, pv, isBook:false };

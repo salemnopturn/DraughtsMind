@@ -35,7 +35,7 @@ function bookAddLine(state, moveIdxs) {
         const lm = s.getMoves();
         const found = lm.find(m => m.from === mi.from && m.to === mi.to);
         if (!found) return;
-        const h = s.hash();
+        const h = s.hash;
         if (!bookMap.has(h)) bookMap.set(h, []);
         const arr = bookMap.get(h);
         if (!arr.includes(found.from * 64 + found.to))
@@ -83,7 +83,7 @@ export async function loadBook() {
 }
 
 export function probeBook(state) {
-    const h = state.hash();
+    const h = state.hash;
     const arr = bookMap.get(h);
     if (!arr || arr.length === 0) return null;
     const lm = state.getMoves();

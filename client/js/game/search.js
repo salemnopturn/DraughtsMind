@@ -153,7 +153,7 @@ function search(state, depth, alpha, beta, ply, prevFrom, prevTo) {
 
     if (depth <= 0) return qsearch(state, alpha, beta, ply, 0);
 
-    const hash = state.hash();
+    const hash = state.hash;
     let hfm = -1, htm = -1;
     const tte = ttProbe(hash);
     if (tte) {
@@ -203,8 +203,8 @@ function search(state, depth, alpha, beta, ply, prevFrom, prevTo) {
             if (staticEval===null) staticEval = evaluate(state, evalMode);
             if (staticEval >= beta) {
                 const ns = state.clone();
-                ns.turn = -ns.turn; ns.halfMoveClock++;
-                const h2 = ns.hash();
+                ns.flipTurn(); ns.halfMoveClock++;
+                const h2 = ns.hash;
                 if (!ns.hashHist.includes(h2)) {
                     ns.hashHist.push(h2);
                     if (ns.hashHist.length > 256) ns.hashHist.shift();
@@ -330,7 +330,7 @@ export function getBestMove(state, maxDepth, timeLimitMs) {
         }
         if (searchAborted) break;
 
-        const tte = ttProbe(state.hash());
+        const tte = ttProbe(state.hash);
         if (tte && tte.fm >= 0) {
             const f = moves.find(m => m.from===tte.fm && m.to===tte.tm);
             if (f) { bestMove=f; bestScore=score; }
@@ -374,7 +374,7 @@ export function getBestMove(state, maxDepth, timeLimitMs) {
     // Extrair PV da TT
     const pv=[], cur=state.clone();
     for (let d=0; d<Math.min(reachedDepth,6); d++) {
-        const te = ttProbe(cur.hash()); if(!te||te.fm<0) break;
+        const te = ttProbe(cur.hash); if(!te||te.fm<0) break;
         const ms = cur.getMoves().find(m=>m.from===te.fm&&m.to===te.tm); if(!ms) break;
         pv.push(ms); cur.applyMove(ms);
     }

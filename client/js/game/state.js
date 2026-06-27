@@ -13,6 +13,7 @@ export class State {
     constructor() {
         this.board = new Int8Array(64);
         this.turn  = 1;
+        this.hash  = 0;
         this.hashHist      = [];
         this.halfMoveClock = 0;
         this.endgameClock  = 0;
@@ -32,7 +33,9 @@ export class State {
             }
         }
         this.wK = 0; this.wP = 12; this.bK = 0; this.bP = 12;
-        this.turn = 1; this.hashHist = [this.hash()];
+        this.turn = 1;
+        this.hash = this.computeHash();
+        this.hashHist = [this.hash];
         this.halfMoveClock = 0; this.endgameClock = 0; this.isEndgame = false; this.endgameLimit = 10;
     }
 
@@ -40,6 +43,7 @@ export class State {
         const s = Object.create(State.prototype);
         s.board         = this.board.slice();
         s.turn          = this.turn;
+        s.hash          = this.hash;
         s.hashHist      = this.hashHist.slice();
         s.halfMoveClock = this.halfMoveClock;
         s.endgameClock  = this.endgameClock;
@@ -51,12 +55,17 @@ export class State {
         return s;
     }
 
-    hash() {
+    computeHash() {
         let h = 0;
         for (let i = 0; i < 64; i++)
             if (this.board[i] !== EMPTY) h ^= zobristTable[i * 4 + getPieceIdx(this.board[i])];
         if (this.turn === -1) h ^= zobristTurn;
         return h;
+    }
+
+    flipTurn() {
+        this.turn *= -1;
+        this.hash ^= zobristTurn;
     }
     isValid(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 8; }
 
@@ -145,19 +154,22 @@ export class State {
         const oldPiece = this.board[m.from];
         const oldSign = Math.sign(oldPiece);
         const wasKing = Math.abs(oldPiece) === 2;
-        this.board[m.from] = EMPTY;
+
+        // Incremental Zobrist: XOR out old piece from source
+        this.hash ^= zobristTable[m.from * 4 + getPieceIdx(oldPiece)];
 
         // Decrement source piece from material counts
         if (oldSign === 1) { if (wasKing) this.wK--; else this.wP--; }
         else { if (wasKing) this.bK--; else this.bP--; }
 
-        // Decrement captured pieces
+        // Decrement captured pieces and XOR them out
         for (const cap of m.captured) {
             const capPiece = this.board[cap];
             const capSign = Math.sign(capPiece);
             const capKing = Math.abs(capPiece) === 2;
             if (capSign === 1) { if (capKing) this.wK--; else this.wP--; }
             else { if (capKing) this.bK--; else this.bP--; }
+            this.hash ^= zobristTable[cap * 4 + getPieceIdx(capPiece)];
             this.board[cap] = EMPTY;
         }
 
@@ -170,6 +182,12 @@ export class State {
         const isKing = Math.abs(p) === 2;
         if (newSign === 1) { if (isKing) this.wK++; else this.wP++; }
         else { if (isKing) this.bK++; else this.bP++; }
+
+        // Incremental Zobrist: XOR in new piece at destination
+        this.hash ^= zobristTable[m.to * 4 + getPieceIdx(p)];
+
+        // Incremental Zobrist: flip side to move
+        this.hash ^= zobristTurn;
 
         if (m.captured.length > 0 || m.isPawn) this.halfMoveClock = 0;
         else this.halfMoveClock++;
@@ -241,9 +259,8 @@ export class State {
         this.turn *= -1;
 
         if (m.captured.length > 0) this.hashHist = [];
-        const h = this.hash();
         if (this.hashHist.length >= 256) this.hashHist.shift();
-        this.hashHist.push(h);
+        this.hashHist.push(this.hash);
     }
 
     checkDraw() {
@@ -254,7 +271,7 @@ export class State {
                 ? "Empate: limite de 2 lances em 1 Dama × 1 Dama (CBD Art.59.D)."
                 : "Empate: limite de 5 lances no final (CBD Art.59.E/F).";
         if (this.hashHist.length >= 9) {
-            const cur = this.hash(); let cnt = 0;
+            const cur = this.hash; let cnt = 0;
             for (const h of this.hashHist) if (h === cur) cnt++;
             if (cnt >= 3) return "Empate: mesma posição repetida 3 vezes (CBD Art.98).";
         }

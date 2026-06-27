@@ -299,7 +299,8 @@ async function resumeMatch(id) {
         const boardData = JSON.parse(res.state.board);
         state.board = new Int8Array(boardData);
         state.turn = res.state.turn;
-        state.hashHist = [state.hash()];
+        state.hash = state.computeHash();
+        state.hashHist = [state.hash];
 
         setState(state);
 

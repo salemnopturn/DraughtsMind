@@ -111,9 +111,9 @@ describe('State', () => {
 
   it('hash changes with turn', () => {
     const s = new State();
-    const h1 = s.hash();
-    s.turn = -1;
-    const h2 = s.hash();
+    const h1 = s.hash;
+    s.flipTurn();
+    const h2 = s.hash;
     assert.notEqual(h1, h2, 'Hash should differ with different turn');
   });
 

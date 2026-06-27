@@ -1,5 +1,5 @@
 export const EMPTY = 0, W_MAN = 1, B_MAN = -1, W_KING = 2, B_KING = -2;
-export const MODE_PVP = 0, MODE_PVA = 1, MODE_AVA = 2;
+export const MODE_PVP = 0, MODE_PVA = 1, MODE_MVH = 2, MODE_AVA = 3, MODE_SANDBOX = 4;
 
 export function getPieceIdx(p) {
   return p === W_MAN ? 0 : p === B_MAN ? 1 : p === W_KING ? 2 : 3;

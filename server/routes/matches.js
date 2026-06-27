@@ -32,8 +32,8 @@ router.post('/', (req, res) => {
   try {
     const db = getDb();
     const { mode } = req.body;
-    if (!['pvp', 'pva', 'ava'].includes(mode)) {
-      return res.status(400).json({ error: 'Invalid mode. Must be pvp, pva, or ava.' });
+    if (!['pvp', 'pva', 'mvh', 'ava', 'sandbox'].includes(mode)) {
+      return res.status(400).json({ error: 'Invalid mode. Must be pvp, pva, mvh, ava, or sandbox.' });
     }
     const result = db.prepare('INSERT INTO matches (mode) VALUES (?)').run(mode);
     db.prepare(

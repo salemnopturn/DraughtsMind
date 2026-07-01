@@ -5,7 +5,6 @@ directories:
 files:
   - client/**/*
   - electron/**/*
-  - node_modules/**/*
 extraResources:
   - from: server/data/book.json
     to: book.json

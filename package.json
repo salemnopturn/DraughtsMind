@@ -1,8 +1,21 @@
 {
   "name": "draughtsmind",
-  "version": "2.0.0",
+  "version": "3.0.0",
+  "description": "Elite Brazilian Draughts AI engine",
+  "author": "salemnopturn",
+  "main": "electron/main.js",
   "type": "module",
   "scripts": {
+    "start": "electron .",
+    "start:nixos": "electron . --no-sandbox --disable-gpu",
+    "build:flatpak": "electron-builder --linux --flatpak",
     "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0"
+  },
+  "devDependencies": {
+    "electron": "^35.7.5",
+    "electron-builder": "^26.0.0"
   }
 }

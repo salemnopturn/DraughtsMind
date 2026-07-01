@@ -35,3 +35,47 @@ Open http://localhost:3000 in your browser.
 ## License
 
 GPL-3.0-or-later
+
+## Desktop App (Electron)
+
+### Prerequisites
+- Node.js 18+
+- npm
+- C++ build tools (gcc, make) for better-sqlite3 native module
+
+### Development
+
+```bash
+npm install
+npm start
+```
+
+### Build Flatpak
+
+```bash
+npm run build:flatpak
+```
+
+Output: `dist/DraughtsMind-3.0.0.flatpak`
+
+### Install locally
+
+```bash
+flatpak install dist/DraughtsMind-3.0.0.flatpak
+flatpak run dev.salemnopturn.draughtsmind
+```
+
+## Flathub Submission
+
+The `flatpak/` directory contains all Flathub-required files:
+- `dev.salemnopturn.draughtsmind.yml` — Flatpak manifest
+- `dev.salemnopturn.draughtsmind.desktop` — Desktop entry
+- `dev.salemnopturn.draughtsmind.metainfo.xml` — AppStream metadata
+- `icons/` — App icons
+
+To build locally with flatpak-builder:
+
+```bash
+flatpak install flathub org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08
+flatpak-builder --force-clean build-dir flatpak/dev.salemnopturn.draughtsmind.yml
+```

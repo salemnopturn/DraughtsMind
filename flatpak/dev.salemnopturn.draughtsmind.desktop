@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=DraughtsMind
+GenericName=Draughts AI
+Comment=Elite Brazilian Draughts AI engine
+Exec=draughtsmind %f
+Icon=dev.salemnopturn.draughtsmind
+Terminal=false
+Categories=Game;StrategyGame;
+Keywords=draughts;checkers;damas;AI;game;strategy;
+StartupWMClass=draughtsmind

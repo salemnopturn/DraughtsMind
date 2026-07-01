@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>dev.salemnopturn.draughtsmind</id>
+
+  <name>DraughtsMind</name>
+  <summary>Elite Brazilian Draughts AI engine</summary>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <developer id="dev.salemnopturn">
+    <name>salemnopturn</name>
+  </developer>
+
+  <description>
+    <p>
+      DraughtsMind is a high-performance Brazilian Draughts (damas brasileiras) AI engine
+      featuring a handcrafted evaluation with 30+ heuristics, alpha-beta search with advanced
+      pruning techniques, and an opening book with thousands of lines.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>5 game modes: PvP, PvA, MVH, AvA, Sandbox</li>
+      <li>Adjustable search depth (1-16 plies)</li>
+      <li>Real-time analysis with evaluation and principal variation</li>
+      <li>Chess-clock timer system</li>
+      <li>PDN import/export</li>
+      <li>Match save/load with SQLite persistence</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">dev.salemnopturn.draughtsmind.desktop</launchable>
+
+  <url type="homepage">https://github.com/salemnopturn/DraughtsMind</url>
+  <url type="bugtracker">https://github.com/salemnopturn/DraughtsMind/issues</url>
+
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/salemnopturn/DraughtsMind/main/screenshots/screenshot.png</image>
+      <caption>DraughtsMind — Brazilian Draughts AI</caption>
+    </screenshot>
+  </screenshots>
+
+  <content_rating type="oars-1.1" />
+
+  <releases>
+    <release version="3.0.0" date="2026-07-01">
+      <description>
+        <p>Electron desktop app with Flatpak packaging.</p>
+        <ul>
+          <li>Standalone desktop application — no server required</li>
+          <li>Flatpak package for Flathub</li>
+          <li>SQLite match persistence</li>
+          <li>Opening book bundled as app resource</li>
+        </ul>
+      </description>
+    </release>
+    <release version="2.0.0" date="2026-06-27">
+      <description>
+        <p>Full feature parity with monolith v31.0.0.</p>
+        <ul>
+          <li>5 game modes including AvA and Sandbox</li>
+          <li>Chess-clock timer system</li>
+          <li>Real-time analysis and board flip</li>
+          <li>PDN import/export</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+
+  <recommends>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </recommends>
+</component>

@@ -1,0 +1,36 @@
+app-id: dev.salemnopturn.draughtsmind
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+base: org.electronjs.Electron2.BaseApp
+base-version: '24.08'
+command: draughtsmind
+
+finish-args:
+  - --share=ipc
+  - --socket=x11
+  - --socket=wayland
+  - --socket=pulseaudio
+  - --device=dri
+  - --filesystem=home
+
+modules:
+  - name: draughtsmind
+    buildsystem: simple
+    build-commands:
+      - npm ci --omit=dev
+      - npx electron-builder --linux --flatpak
+      - install -dm755 /app/bin
+      - install -dm755 /app/share/draughtsmind
+      - cp -r dist/linux-unpacked/* /app/share/draughtsmind/
+      - printf '#!/bin/sh\nexec /app/share/draughtsmind/draughtsmind "$@"\n' > /app/bin/draughtsmind
+      - chmod +x /app/bin/draughtsmind
+      - install -Dm644 flatpak/dev.salemnopturn.draughtsmind.desktop /app/share/applications/dev.salemnopturn.draughtsmind.desktop
+      - install -Dm644 flatpak/dev.salemnopturn.draughtsmind.metainfo.xml /app/share/metainfo/dev.salemnopturn.draughtsmind.metainfo.xml
+      - for size in 16 32 48 64 128 256 512; do
+          install -Dm644 flatpak/icons/hicolor/${size}x${size}/apps/dev.salemnopturn.draughtsmind.png
+            /app/share/icons/hicolor/${size}x${size}/apps/dev.salemnopturn.draughtsmind.png;
+        done
+    sources:
+      - type: dir
+        path: ../

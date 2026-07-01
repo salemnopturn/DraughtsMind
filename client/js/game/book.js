@@ -72,9 +72,14 @@ function buildFromPDN(pdnLines) {
 
 export async function loadBook() {
     try {
-        const res = await fetch('/api/book');
-        if (!res.ok) return;
-        const data = await res.json();
+        let data;
+        if (window.draughtsmind) {
+            data = await window.draughtsmind.getBook();
+        } else {
+            const res = await fetch('/api/book');
+            if (!res.ok) return;
+            data = await res.json();
+        }
         if (data.compressed) buildFromCompressed(data.compressed);
         if (data.pdn) buildFromPDN(data.pdn);
     } catch (_) {

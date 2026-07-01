@@ -1,0 +1,15 @@
+appId: dev.salemnopturn.draughtsmind
+productName: DraughtsMind
+directories:
+  output: dist
+files:
+  - client/**/*
+  - electron/**/*
+extraResources:
+  - from: server/data/book.json
+    to: book.json
+linux:
+  target:
+    - flatpak
+  category: Game
+  icon: build/icons

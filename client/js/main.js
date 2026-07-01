@@ -51,10 +51,13 @@ function updateCpuStats(result) {
     }
 }
 
-// ── API helpers ─────────────────────────────────────────────────────────────
+// ── API helpers (IPC bridge with fetch fallback) ────────────────────────────
 
-async function apiPost(url, body) {
-    const res = await fetch(url, {
+const api = window.draughtsmind?.matches;
+
+async function apiPost(_url, body) {
+    if (api) return api.create(body);
+    const res = await fetch(_url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
@@ -62,8 +65,12 @@ async function apiPost(url, body) {
     return res.json();
 }
 
-async function apiPut(url, body) {
-    const res = await fetch(url, {
+async function apiPut(_url, body) {
+    if (api) {
+        const id = parseInt(_url.split('/').pop());
+        return api.update(id, body);
+    }
+    const res = await fetch(_url, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
@@ -71,8 +78,13 @@ async function apiPut(url, body) {
     return res.json();
 }
 
-async function apiGet(url) {
-    const res = await fetch(url);
+async function apiGet(_url) {
+    if (api) {
+        const parts = _url.split('/');
+        const id = parts.length > 3 ? parseInt(parts[parts.length - 1]) : null;
+        return id ? api.get(id) : api.list();
+    }
+    const res = await fetch(_url);
     return res.json();
 }
 
@@ -261,7 +273,8 @@ async function finalizeMatch(result) {
 
 async function deleteMatch(id) {
     try {
-        await fetch(`/api/matches/${id}`, { method: 'DELETE' });
+        if (api) await api.delete(id);
+        else await fetch(`/api/matches/${id}`, { method: 'DELETE' });
     } catch (_) { /* ignore */ }
 }
 
